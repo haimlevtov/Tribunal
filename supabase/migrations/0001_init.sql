@@ -1,6 +1,32 @@
--- The Tribunal — initial schema
+-- The Tribunal — schema
 -- Run this in the Supabase SQL editor (Dashboard → SQL Editor → New query),
 -- or via `supabase db push` if you have the CLI linked to the project.
+--
+-- SAFE TO RE-RUN. The script drops the tribunal's own objects before recreating
+-- them, so a half-applied or out-of-date schema can be repaired by running it
+-- again. It touches nothing outside the five tables and five types below.
+--
+-- WARNING: re-running DELETES all stored runs, speeches, verdicts, and the cost
+-- ledger. That is the intended trade-off for a demo app with no data worth
+-- keeping — do not run this against a database whose history you want.
+
+-- ------------------------------------------------------------ clean slate
+-- Order matters only for readability; `cascade` handles the dependencies.
+
+drop trigger  if exists llm_calls_bump_totals on llm_calls;
+drop function if exists bump_run_totals() cascade;
+
+drop table if exists llm_calls    cascade;
+drop table if exists verdicts     cascade;
+drop table if exists speeches     cascade;
+drop table if exists participants cascade;
+drop table if exists runs         cascade;
+
+drop type if exists run_status     cascade;
+drop type if exists model_mode     cascade;
+drop type if exists character_mode cascade;
+drop type if exists seat_role      cascade;
+drop type if exists verdict_kind   cascade;
 
 -- ---------------------------------------------------------------- enums
 
@@ -131,3 +157,11 @@ alter table verdicts     enable row level security;
 alter table llm_calls    enable row level security;
 
 revoke all on runs, participants, speeches, verdicts, llm_calls from anon, authenticated;
+
+-- ------------------------------------------------------- refresh the API
+-- PostgREST serves the REST API from a cached copy of the schema. Supabase
+-- normally reloads it automatically, but it can lag — and a stale cache is
+-- exactly what produces "Could not find the 'x' column of 'y' in the schema
+-- cache" when the column plainly exists. This makes the reload explicit.
+
+notify pgrst, 'reload schema';

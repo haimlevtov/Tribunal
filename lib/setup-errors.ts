@@ -14,6 +14,12 @@ export function describeSetupError(raw: string): string {
     return "Server not configured: the Supabase environment variables are missing. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, then redeploy.";
   }
 
+  // A missing COLUMN means the schema exists but predates the current code —
+  // a different fix from a missing table, so say so rather than lumping them.
+  if (m.includes("could not find the") && m.includes("column")) {
+    return "Database schema is out of date: it is missing a column this version needs. Re-run supabase/migrations/0001_init.sql (it is safe to re-run and will rebuild the tables).";
+  }
+
   // PostgREST: 42P01 undefined_table, PGRST205 missing from schema cache.
   if (
     m.includes("42p01") ||
