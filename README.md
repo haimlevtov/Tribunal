@@ -1,5 +1,7 @@
 # The Tribunal
 
+**Live: [tribunal-haimlevtov.vercel.app](https://tribunal-haimlevtov.vercel.app/)**
+
 A courtroom simulation run by LLMs. You write a charge sheet; four advocates argue it — two for
 the accused, two against — and three judges then rule **independently**, without seeing each
 other's verdicts. The app returns three verdicts, the reasoning behind each, and a full token
@@ -97,9 +99,27 @@ npm run dev
 
 ## Deploying to Vercel
 
-Import the repo at [vercel.com/new](https://vercel.com/new), then add `OPENROUTER_API_KEY` and
-`SUPABASE_SERVICE_ROLE_KEY` (and `SUPABASE_URL`) under Settings → Environment Variables. The
-Hobby plan's 300s function ceiling is enough for a full run; `maxDuration` is already set.
+Deployed at **[tribunal-haimlevtov.vercel.app](https://tribunal-haimlevtov.vercel.app/)**.
+
+To deploy your own, import the repo at [vercel.com/new](https://vercel.com/new), then set these
+under Settings → Environment Variables, scoped to Production:
+
+| Variable | Where it comes from |
+|---|---|
+| `OPENROUTER_API_KEY` | [openrouter.ai/keys](https://openrouter.ai/keys) — free account, no credits needed |
+| `SUPABASE_URL` | your Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → `service_role` |
+
+None of them may carry a `NEXT_PUBLIC_` prefix — that would ship them to the browser.
+
+**Vercel bakes environment variables in at build time, so redeploy after adding them** —
+Deployments → latest → ⋯ → Redeploy. Adding a variable alone changes nothing.
+
+The Hobby plan's 300s function ceiling is enough for a full run; `maxDuration` is already set.
+
+Since a deployed URL is public and the free quota is only ~7 runs/day, consider also setting
+`TRIBUNAL_ACCESS_CODE` to a shared phrase. The form then requires it and the API rejects runs
+without it, so a passing crawler can't burn the day's quota before a demo.
 
 ---
 
