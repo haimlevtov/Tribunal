@@ -9,6 +9,7 @@ import {
 } from "@/lib/db";
 import { publicModelLabel } from "@/lib/models";
 import { personaByKey } from "@/lib/personas";
+import { describeSetupError } from "@/lib/setup-errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +38,10 @@ export async function GET(
       client.from("verdicts").select("*").eq("run_id", id),
       client.from("llm_calls").select("*").eq("run_id", id),
     ]);
+
+    // A query error is not a missing row. Reporting a broken schema or a rejected
+    // key as 404 hides the real problem behind a plausible-looking answer.
+    if (runRes.error) throw new Error(runRes.error.message);
 
     const run = runRes.data as RunRow | null;
     if (!run) return NextResponse.json({ error: "Not found." }, { status: 404 });
@@ -142,7 +147,12 @@ export async function GET(
       },
     });
   } catch (err) {
-    console.error("[GET /api/runs/:id]", err);
-    return NextResponse.json({ error: "Could not load the run." }, { status: 500 });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[GET /api/runs/:id]", message);
+    const described = describeSetupError(message);
+    return NextResponse.json(
+      { error: described === "Could not start the tribunal." ? "Could not load the run." : described },
+      { status: 500 },
+    );
   }
 }

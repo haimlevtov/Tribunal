@@ -9,6 +9,7 @@ import {
 } from "@/lib/orchestrator";
 import { PERSONA_KEYS } from "@/lib/personas";
 import { CreateRunInput } from "@/lib/schemas";
+import { describeSetupError } from "@/lib/setup-errors";
 
 export const runtime = "nodejs";
 // The background work runs inside this invocation via waitUntil, so the ceiling
@@ -130,6 +131,6 @@ export async function POST(request: Request) {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[POST /api/runs]", message);
-    return NextResponse.json({ error: "Could not start the tribunal." }, { status: 500 });
+    return NextResponse.json({ error: describeSetupError(message) }, { status: 500 });
   }
 }
