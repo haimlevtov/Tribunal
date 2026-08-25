@@ -18,7 +18,7 @@ See [PLAN.md](PLAN.md) for the architecture and the reasoning behind each decisi
 
 | Cast mode | What the user does | What the backend does |
 |---|---|---|
-| **Standing cast** | Nothing | Runs the seven built-in characters. Repeatable, and what the example charge sheet is tuned for. |
+| **Standing cast** | Nothing | Runs the dossier's seven characters: Jon Snow and Tyrion Lannister for the defence, Daenerys Targaryen and Grey Worm for the prosecution, and the Barak, Elon and Shamgar judicial profiles on the bench. |
 | **Name them yourself** | Types a name per seat — "Atticus Finch", "a tired public defender", "my grandmother" | Forges a full personality to fit each name and its seat |
 | **Let the system decide** | Nothing | Invents a cast chosen to make *this* charge sheet hard to settle |
 | **Upload a case dossier** | Uploads a PDF | Reads the charge sheet and all seven characters out of the document |
@@ -50,7 +50,13 @@ mode, the browser never receives a system prompt. One upload can drive several r
 cast can be run in both model modes and compared.
 
 Characters based on real people follow the source document's own rule: their **method** is
-adapted, not their identity. Nothing produced predicts how any real person would rule.
+adapted, not their identity. Nothing produced predicts how any real person would rule. The same
+note is shown under the bench in the UI, and travels with the prompt itself.
+
+The **example charge sheet** is the dossier's canonical Case T-001 (*The Realm v. Jon Snow*),
+reproduced verbatim — do not reword it. It asks whether the killing was *justified / not
+justified*; the rubric tells judges to read `not_guilty` as "justified" and `guilty` as "not
+justified" when a charge sheet is framed that way.
 
 ## Two model modes
 

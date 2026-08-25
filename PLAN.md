@@ -97,8 +97,9 @@ on the same charge sheet.
 One model id for all 4 advocates + 3 judges. Differences between characters come purely from
 their system prompts. This is the clean experiment: it isolates *personality* from *model*.
 
-Default: **`google/gemma-4-26b-a4b-it:free`** — MoE (3.8B active of 25.2B, so it's fast), 262K
-context, strict structured outputs, $0.
+Default: **`dots-studio/dots-3-note-preview:free`** — 512K context, $0, and the model most
+recently *verified* to return schema-conforming JSON. On this tier reliability beats parameter
+count; see the roster note below.
 
 ### Mode B — `per_character`: a different model per seat
 
@@ -108,15 +109,20 @@ the more entertaining run but confounds the two variables — worth saying out l
 All seven below are **$0** and support at least `response_format`. Judges get the three strongest
 seats; the 2.6B model is deliberately placed on an advocate, where a weaker argument is survivable.
 
-| Seat | Model | Ctx | Strict structured |
-|---|---|---|---|
-| Advocate FOR #1 | `google/gemma-4-26b-a4b-it:free` | 262K | ✅ |
-| Advocate FOR #2 | `openai/gpt-oss-20b:free` | 131K | ✅ |
-| Advocate AGAINST #1 | `google/gemma-4-31b-it:free` | 262K | ⚠️ json_object only |
-| Advocate AGAINST #2 | `liquid/lfm-2.5-2.6b:free` | 128K | ✅ |
-| Judge #1 | `nvidia/nemotron-3-super-120b-a12b:free` | 262K | ✅ |
-| Judge #2 | `dots-studio/dots-3-note-preview:free` | 512K | ✅ |
-| Judge #3 | `nvidia/nemotron-nano-9b-v2:free` | 128K | ✅ |
+| Seat | Model | Ctx |
+|---|---|---|
+| Judge #1 | `dots-studio/dots-3-note-preview:free` | 512K |
+| Judge #2 | `nvidia/nemotron-3-super-120b-a12b:free` | 262K |
+| Judge #3 | `z-ai/glm-5.2:free` | 256K |
+| Advocate FOR #1 | `google/gemma-4-26b-a4b-it:free` | 262K |
+| Advocate FOR #2 | `google/gemma-4-31b-it:free` | 262K |
+| Advocate AGAINST #1 | `minimax/minimax-m2.7:free` | 197K |
+| Advocate AGAINST #2 | `nvidia/nemotron-3-ultra-550b-a55b:free` | 1M |
+
+**This roster expires.** Verified 2026-08-25; within ten days of the first version,
+`openai/gpt-oss-20b:free` and `nvidia/nemotron-nano-9b-v2:free` had stopped being free and
+`google/gemma-4-26b-a4b-it` had withdrawn its structured-output support. Run `npm run smoke`
+before relying on it.
 
 ### Fallback chain (both modes)
 
@@ -124,10 +130,20 @@ Free endpoints get rate-limited and occasionally 503. Each seat resolves through
 recorded in `llm_calls.model_id` as *what actually answered*:
 
 1. the assigned free model
-2. `openrouter/free` — OpenRouter's free-model router (200K ctx, strict structured outputs), a
-   good generic catch since it picks whatever free capacity exists
+2. five other free models, tried in order — breadth is the point, because free endpoints are
+   rate-limited *per model*
 3. **paid** `openai/gpt-oss-120b` — $0.03/M in, $0.17/M out — only if `ALLOW_PAID_FALLBACK=true`
    and the budget guard (§4) permits
+
+`openrouter/free` was in this chain and has been **removed**. It selects at random among all free
+models, including non-chat ones: in testing it routed a verdict request to a content-safety
+classifier that replied `"User Safety: safe"`. Those junk answers were logged as empty completions
+and killed whole seats.
+
+Every request also sends `reasoning: { exclude: true }`. Every free model is now a reasoning
+model, and by default the chain of thought arrives in `content` — so the JSON never appears and
+the response stops at `max_tokens` mid-thought. Excluding it turned two apparently broken models
+into working ones.
 
 ---
 
@@ -430,12 +446,16 @@ All five are settled and built. Recorded here so the reasoning survives.
 2. **No rebuttal round.** v1 runs a single parallel advocate wave — 7 calls, not 11. A rebuttal
    round remains the most interesting extension if the demo lands well (§1.6).
 3. **Verdict vocabulary:** `guilty / not_guilty / hung`, plus a 0–1 confidence. No sentencing.
-4. **Personas:** seven defaults in `lib/personas.ts` — two defence (Humanist, Technician), two
-   prosecution (Moralist, Empiricist), three judges (Literalist, Pragmatist, Skeptic). Deliberately
-   non-overlapping: two advocates on one side who reason alike produce one speech twice. Users can
-   also name the cast or let the system invent one — see §4a. Free-text system prompts in the
-   browser were considered and rejected: naming a character gives comparable control without
-   putting prompts in client code.
+4. **Personas:** the seven defaults in `lib/personas.ts` are the cast from the ASE running-project
+   dossier — Jon Snow and Tyrion Lannister on the defence seats, Daenerys Targaryen and Grey Worm
+   on the prosecution seats, and the Barak, Elon and Shamgar judicial profiles on the bench. Their
+   descriptions follow the dossier's own wording, converted to second person. The dossier's
+   SIMULATION RULE is appended by `buildSystemPrompt()`: the seat fixes procedural role only, never
+   a conclusion. The three judicial profiles carry a note, in the prompt and in the UI, that they
+   adapt method from published opinions and do not impersonate the individuals or predict a real
+   court. Users can also name the cast, let the system invent one, or upload a dossier — see §4a.
+   Free-text system prompts in the browser were considered and rejected: naming a character gives
+   comparable control without putting prompts in client code.
 5. **Access:** open by default, with a global 40-runs/day cap and an optional `TRIBUNAL_ACCESS_CODE`
    if the URL circulates. No IP addresses are stored.
 

@@ -7,14 +7,15 @@
 export const JUDGING_RUBRIC = `HOW TO REACH YOUR VERDICT
 
 1. The question is whether the specific allegation in the charge sheet has been made out — not whether the accused is a good person.
-2. The accused is presumed not guilty. The prosecution carries the burden. If the arguments leave you genuinely unable to resolve the question, that is not a conviction.
-3. Weigh the arguments actually made. An advocate who asserted something without support has not established it, however well they said it.
-4. You have heard four advocates: two arguing FOR the accused, two AGAINST. Judge the arguments, not the count — three weak arguments do not outweigh one strong one.
-5. Return "hung" only when the arguments genuinely fail to settle the question. It is an honest outcome, not an escape from a hard case.
-6. You are ruling alone. You have not seen the other judges' verdicts and must not speculate about them. Disagreement between judges is expected and is the point of this tribunal.
-7. In "reasoning", give a real account of how you got there: what moved you, what did not, and where you remain unsure. This is the protocol of the tribunal and will be read by the public. Roughly 200 words.
-8. In "points_credited" and "points_rejected", quote or closely paraphrase the advocates' key points you accepted and dismissed.
-9. Set "confidence" honestly. A finely balanced case should not be reported at 0.95.`;
+2. Some charge sheets put the question as justified / not justified rather than guilty / not guilty. Where a charge sheet does that, read "not_guilty" as "justified" and "guilty" as "not justified", and name the framing you are using in your reasoning.
+3. The accused is presumed not guilty. The prosecution carries the burden. If the arguments leave you genuinely unable to resolve the question, that is not a conviction.
+4. Weigh the arguments actually made. An advocate who asserted something without support has not established it, however well they said it.
+5. You have heard four advocates: two arguing FOR the accused, two AGAINST. Judge the arguments, not the count — three weak arguments do not outweigh one strong one.
+6. Return "hung" only when the arguments genuinely fail to settle the question. It is an honest outcome, not an escape from a hard case.
+7. You are ruling alone. You have not seen the other judges' verdicts and must not speculate about them. Disagreement between judges is expected and is the point of this tribunal.
+8. In "reasoning", give a real account of how you got there: what moved you, what did not, and where you remain unsure. This is the protocol of the tribunal and will be read by the public. Roughly 200 words.
+9. In "points_credited" and "points_rejected", quote or closely paraphrase the advocates' key points you accepted and dismissed.
+10. Set "confidence" honestly. A finely balanced case should not be reported at 0.95.`;
 
 /** Wraps untrusted user input in explicit delimiters. See INJECTION_GUARD in personas.ts. */
 export function chargeSheetBlock(chargeSheet: string): string {
