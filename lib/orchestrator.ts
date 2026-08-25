@@ -24,8 +24,8 @@ import {
 
 const ADVOCATE_TEMPERATURE = 0.8; // advocates should have some rhetorical range
 const JUDGE_TEMPERATURE = 0.3; // judges should not
-const ADVOCATE_MAX_TOKENS = 900;
-const JUDGE_MAX_TOKENS = 1100;
+const ADVOCATE_MAX_TOKENS = 2000;
+const JUDGE_MAX_TOKENS = 2500;
 
 /**
  * Resolve which model sits in which seat, before any call is made, so the run is
@@ -47,6 +47,11 @@ export function assignModels(
 /** Seat names typed by the user, keyed by seat id. Only used in `named` mode. */
 export type SeatNames = Record<string, string>;
 
+/** A cast that is already written — currently only produced by a dossier upload. */
+export type ReadyCast =
+  | Array<{ key: string; name: string; blurb: string; body: string }>
+  | null;
+
 /**
  * Persist the seven seats. Called inside the POST, before the run goes async.
  *
@@ -59,23 +64,39 @@ export async function createParticipants(
   models: Record<string, ModelSpec>,
   characterMode: CharacterMode = "default",
   seatNames: SeatNames = {},
+  /** Dossier mode: the cast is already written, so seats are filled immediately. */
+  cast: ReadyCast = null,
 ): Promise<ParticipantRow[]> {
   const useDefaults = characterMode === "default";
+  const byKey = new Map((cast ?? []).map((c) => [c.key, c]));
 
-  const rows = [...ADVOCATE_PERSONAS, ...JUDGE_PERSONAS].map((p) => ({
-    run_id: runId,
-    role: p.role,
-    seat_index: p.seatIndex,
-    persona_key: p.key,
-    persona_name: useDefaults
-      ? p.name
-      : (seatNames[p.key]?.trim() || "Casting…"),
-    // Stored even for defaults, so a run stays reproducible after the defaults
-    // in code are edited.
-    persona_body: useDefaults ? p.body : null,
-    persona_blurb: useDefaults ? p.blurb : null,
-    model_id: models[p.key].id,
-  }));
+  const rows = [...ADVOCATE_PERSONAS, ...JUDGE_PERSONAS].map((p) => {
+    const ready = byKey.get(p.key);
+    if (ready) {
+      return {
+        run_id: runId,
+        role: p.role,
+        seat_index: p.seatIndex,
+        persona_key: p.key,
+        persona_name: ready.name,
+        persona_body: ready.body,
+        persona_blurb: ready.blurb,
+        model_id: models[p.key].id,
+      };
+    }
+    return {
+      run_id: runId,
+      role: p.role,
+      seat_index: p.seatIndex,
+      persona_key: p.key,
+      persona_name: useDefaults ? p.name : (seatNames[p.key]?.trim() || "Casting…"),
+      // Stored even for defaults, so a run stays reproducible after the defaults
+      // in code are edited.
+      persona_body: useDefaults ? p.body : null,
+      persona_blurb: useDefaults ? p.blurb : null,
+      model_id: models[p.key].id,
+    };
+  });
 
   const { data, error } = await db().from("participants").insert(rows).select();
   if (error) throw new Error(`could not create participants: ${error.message}`);
@@ -331,7 +352,8 @@ export async function executeRun(runId: string): Promise<void> {
       throw new Error(`participants missing for run ${runId}: ${pErr?.message}`);
     }
 
-    if ((run as RunRow).character_mode !== "default") {
+    const mode = (run as RunRow).character_mode;
+    if (mode === "named" || mode === "auto") {
       await setStatus(runId, "forging_cast");
       await forgeAndPersistCast(run as RunRow, participants as ParticipantRow[]);
     }

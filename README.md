@@ -14,15 +14,16 @@ See [PLAN.md](PLAN.md) for the architecture and the reasoning behind each decisi
 
 ---
 
-## Three ways to cast the tribunal
+## Four ways to cast the tribunal
 
 | Cast mode | What the user does | What the backend does |
 |---|---|---|
 | **Standing cast** | Nothing | Runs the seven built-in characters. Repeatable, and what the example charge sheet is tuned for. |
 | **Name them yourself** | Types a name per seat — "Atticus Finch", "a tired public defender", "my grandmother" | Forges a full personality to fit each name and its seat |
 | **Let the system decide** | Nothing | Invents a cast chosen to make *this* charge sheet hard to settle |
+| **Upload a case dossier** | Uploads a PDF | Reads the charge sheet and all seven characters out of the document |
 
-The last two add **one** model call to the run (8 instead of 7): the whole cast is written in a
+Naming a cast and letting the system decide each add **one** model call to the run (8 instead of 7): the whole cast is written in a
 single call, which keeps the daily free-tier budget intact and lets the model see all seven
 seats at once — which is what stops it writing the same character twice.
 
@@ -34,6 +35,22 @@ If a name contradicts its seat — "Javert" on the defence bench — the charact
 and the manner but argues the side the seat requires. The seat always wins.
 
 If the forge fails, the run falls back to the standing cast and continues rather than dying.
+
+### Uploading a dossier
+
+A case PDF — a charge sheet plus profiles for four advocates and three judges — is read in one
+call on upload, so the run itself is still 7 calls. The extracted charge sheet lands in the form
+where it can be edited before the tribunal sits, and each character is labelled `extracted` or
+`invented` so it is clear which seats the document actually filled.
+
+Text PDFs only: a scan would need OCR first. Limit 4MB (Vercel caps request bodies).
+
+Character bodies are stored server-side and referenced by a dossier id — like every other cast
+mode, the browser never receives a system prompt. One upload can drive several runs, so the same
+cast can be run in both model modes and compared.
+
+Characters based on real people follow the source document's own rule: their **method** is
+adapted, not their identity. Nothing produced predicts how any real person would rule.
 
 ## Two model modes
 
@@ -60,8 +77,13 @@ npm install
 The Supabase project is at `pbxfspcfrsunscglejfn`. Open the
 [SQL editor](https://supabase.com/dashboard/project/pbxfspcfrsunscglejfn/sql/new), paste the
 contents of [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), and run it.
+It is safe to re-run: it drops its own objects first, which also repairs a half-applied schema.
 
-It creates five tables (`runs`, `participants`, `speeches`, `verdicts`, `llm_calls`), a trigger
+If you already have runs stored that you want to keep, run
+[`0002_dossiers.sql`](supabase/migrations/0002_dossiers.sql) instead — it only adds the dossier
+table and column, and destroys nothing.
+
+It creates six tables (`dossiers`, `runs`, `participants`, `speeches`, `verdicts`, `llm_calls`), a trigger
 that maintains per-run token/cost totals, and enables RLS with **no** permissive policies —
 the browser can never reach Postgres directly.
 
@@ -85,9 +107,9 @@ None of these may carry a `NEXT_PUBLIC_` prefix. They must stay server-side.
 npm run smoke
 ```
 
-Probes all seven free models, confirms strict JSON mode works, and confirms OpenRouter is
-returning cost data. Costs $0. If a model or two is unavailable that's normal — free endpoints
-rotate, and the fallback chain handles it at runtime.
+Probes all seven free models, confirms JSON mode works, and confirms OpenRouter is returning
+cost data. Costs $0. If a model or two is unavailable that's normal — the free tier churns
+constantly (see below) and the fallback chain handles it at runtime.
 
 ### 5. Run
 
@@ -122,6 +144,25 @@ Since a deployed URL is public and the free quota is only ~7 runs/day, consider 
 without it, so a passing crawler can't burn the day's quota before a demo.
 
 ---
+
+## The free tier moves under you
+
+Checked on 2026-08-25, within days of the roster being written:
+
+- `openai/gpt-oss-20b:free` and `nvidia/nemotron-nano-9b-v2:free` **stopped being free** and now
+  return 404.
+- `google/gemma-4-26b-a4b-it:free` **withdrew** its advertised structured-output support.
+- Every remaining free model is a **reasoning** model. By default the chain of thought arrives in
+  `content`, so the JSON never appears and the response stops at `max_tokens` mid-thought. Every
+  request therefore sends `reasoning: { exclude: true }`, which is what put the answers back in
+  `content` and turned two apparently broken models into working ones.
+- `openrouter/free` is **deliberately not used**. It picks at random among all free models,
+  including non-chat ones — in testing it routed a verdict request to a content-safety classifier
+  that replied `"User Safety: safe"`. Those junk responses were being logged as empty completions
+  and killing whole seats.
+
+Run `npm run smoke` before a demo. It probes the whole roster and tells you what is actually
+answering today, which is not always what the catalogue claims.
 
 ## Rate limits
 

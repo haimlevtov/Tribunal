@@ -21,11 +21,43 @@ interface Props {
 }
 
 type ModelMode = "uniform" | "per_character";
-type CastMode = "default" | "named" | "auto";
+type CastMode = "default" | "named" | "auto" | "dossier";
 
-const EXAMPLE = `The accused, a night-shift systems engineer, disabled the automated alerting for a production database for six hours on the evening of 14 March, in order to complete a migration without being interrupted. During that window an unrelated disk fault went unreported and 40 minutes of customer records were lost.
+interface DossierCast {
+  key: string;
+  name: string;
+  blurb: string;
+  source: "extracted" | "invented";
+}
 
-The accused states that the alerting had produced 200 false alarms that month, that the migration had already been postponed twice, and that no written policy forbade silencing alerts. The charge is negligence in the discharge of duty.`;
+interface DossierResult {
+  dossier_id: string;
+  case_title: string;
+  charge_sheet: string;
+  page_count: number;
+  characters: DossierCast[];
+}
+
+const EXAMPLE = `Case T-001: The Realm v. Jon Snow
+
+ACCUSED: Jon Snow.  DECEASED: Daenerys Targaryen.
+
+ACT ALLEGED: Jon intentionally killed Daenerys by stabbing her during a private meeting in the throne room after the fall of King's Landing.
+
+BACKGROUND
+Jon Snow grew up believing he was the illegitimate son of Lord Eddard Stark, became a military commander and then King in the North, and later learned he was the lawful son of Rhaegar Targaryen and Lyanna Stark - giving him a stronger hereditary claim to the Iron Throne than Daenerys, though he did not want to rule.
+
+Daenerys Targaryen, exiled heir of the dynasty that once ruled Westeros, survived abuse, gained three dragons, freed enslaved people and built an army. Her victories made her both a liberator and an increasingly absolute ruler. She and Jon became allies and lovers while fighting the Night King, and Jon pledged loyalty to her. After that war she turned to the Iron Throne, and Jon's hidden parentage weakened her claim and fed her fear of betrayal.
+
+AGREED FACTUAL RECORD
+- King's Landing had surrendered: its bells rang and organised resistance had ceased. Daenerys then used her dragon against streets and civilians, causing destruction on a vast scale. Jon witnessed it.
+- After the victory, Daenerys told her assembled forces that the campaign of "liberation" would continue beyond King's Landing. Jon heard the speech.
+- Tyrion Lannister renounced his office as Hand and was imprisoned. He warned Jon that Daenerys would treat Jon's sisters, and anyone else she regarded as an obstacle, as enemies.
+- Jon asked Daenerys to forgive Tyrion and to show mercy. She refused to let others choose what was good, and presented her own judgment as decisive.
+- Daenerys was unarmed and was not attacking Jon when he killed her. Jon used their intimacy to get close enough to strike. He had not convened a council, attempted detention, or sought a public surrender of power.
+
+QUESTION FOR JUDGMENT
+Was Jon Snow's intentional killing of Daenerys Targaryen justified as the necessary defence of others and of the realm, given what he knew, the scale of the threatened harm, the absence or presence of safer alternatives, and his lack of formal authority?`;
 
 /** Suggestions, not defaults — they only appear as input placeholders. */
 const NAME_HINTS: Record<string, string> = {
@@ -60,10 +92,41 @@ export default function ChargeSheetForm({
   const [accessCode, setAccessCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dossier, setDossier] = useState<DossierResult | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const tooShort = chargeSheet.trim().length < CHARGE_SHEET_MIN;
   const namedButEmpty =
     castMode === "named" && Object.values(names).every((v) => !v?.trim());
+  const dossierMissing = castMode === "dossier" && !dossier;
+
+  async function uploadDossier(file: File) {
+    setUploadError(null);
+    setUploading(true);
+    setDossier(null);
+
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/dossier", { method: "POST", body });
+      const json = await res.json();
+
+      if (!res.ok) {
+        setUploadError(json.error ?? "That dossier could not be read.");
+        return;
+      }
+
+      setDossier(json as DossierResult);
+      // The charge sheet is a suggestion, not a lock — it lands in the textarea
+      // so it can be read and edited before the tribunal sits.
+      if (json.charge_sheet) setChargeSheet(json.charge_sheet.slice(0, CHARGE_SHEET_MAX));
+    } catch {
+      setUploadError("Upload failed. Check your connection and try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -84,6 +147,7 @@ export default function ChargeSheetForm({
           character_mode: castMode,
           ...(modelMode === "uniform" ? { uniform_model_id: model } : {}),
           ...(castMode === "named" ? { character_names } : {}),
+          ...(castMode === "dossier" && dossier ? { dossier_id: dossier.dossier_id } : {}),
           ...(requiresAccessCode ? { access_code: accessCode } : {}),
         }),
       });
@@ -137,7 +201,7 @@ export default function ChargeSheetForm({
 
         <div className="field">
           <label>Who sits on the tribunal</label>
-          <div className="modes modes-3">
+          <div className="modes modes-4">
             <div
               className={`mode${castMode === "default" ? " on" : ""}`}
               onClick={() => setCastMode("default")}
@@ -194,13 +258,113 @@ export default function ChargeSheetForm({
                 settle.
               </div>
             </div>
+            <div
+              className={`mode${castMode === "dossier" ? " on" : ""}`}
+              onClick={() => setCastMode("dossier")}
+            >
+              <div className="t">
+                <input
+                  type="radio"
+                  name="cast"
+                  checked={castMode === "dossier"}
+                  onChange={() => setCastMode("dossier")}
+                />
+                Upload a case dossier
+              </div>
+              <div className="d">
+                Read the charge sheet and all seven characters straight out of a
+                PDF case file.
+              </div>
+            </div>
           </div>
-          {castMode !== "default" && (
+          {(castMode === "named" || castMode === "auto") && (
             <div className="counter">
               Adds one model call to the run (8 instead of 7). Still free.
             </div>
           )}
+          {castMode === "dossier" && (
+            <div className="counter">
+              The dossier is read once on upload, so the run itself is still 7 calls.
+            </div>
+          )}
         </div>
+
+        {castMode === "dossier" && (
+          <div className="field">
+            <label htmlFor="pdf">Case dossier (PDF)</label>
+            <input
+              id="pdf"
+              type="file"
+              accept="application/pdf,.pdf"
+              disabled={uploading}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) uploadDossier(f);
+              }}
+            />
+            <div className="counter">
+              A charge sheet plus profiles for four advocates and three judges.
+              Text PDFs only — a scan would need OCR first.
+            </div>
+
+            {uploading && (
+              <div className="status" style={{ marginTop: "0.9rem" }}>
+                <span className="dot" />
+                Reading the dossier…
+              </div>
+            )}
+
+            {uploadError && <div className="err">{uploadError}</div>}
+
+            {dossier && (
+              <>
+                <div className="counter" style={{ textAlign: "left", marginTop: "0.9rem" }}>
+                  Read {dossier.page_count} page{dossier.page_count === 1 ? "" : "s"}
+                  {dossier.case_title ? ` · ${dossier.case_title}` : ""}
+                  {dossier.charge_sheet
+                    ? " · the charge sheet above was filled in from it and can be edited"
+                    : " · no charge sheet found, so write one above"}
+                </div>
+
+                <div className="seat-grid" style={{ marginTop: "0.9rem" }}>
+                  {dossier.characters.map((c) => {
+                    const seat = seats.find((x) => x.key === c.key);
+                    return (
+                      <div className="card" key={c.key} style={{ marginBottom: 0 }}>
+                        <h3 style={{ fontSize: "0.98rem" }}>
+                          {c.name}{" "}
+                          {c.source === "invented" && (
+                            <span className="tag model">invented</span>
+                          )}
+                        </h3>
+                        <div className="meta" style={{ marginBottom: 0 }}>
+                          <span
+                            className={`tag ${
+                              seat?.role === "advocate_for"
+                                ? "for"
+                                : seat?.role === "advocate_against"
+                                  ? "against"
+                                  : "model"
+                            }`}
+                          >
+                            {seat ? SIDE_LABEL[seat.role] : c.key}
+                          </span>{" "}
+                          {c.blurb}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="counter" style={{ textAlign: "left" }}>
+                  Characters based on real people follow the document&apos;s own rule:
+                  their method is adapted, not their identity. Nothing here predicts
+                  how any real person would rule.
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {castMode === "named" && (
           <div className="field">
@@ -314,12 +478,17 @@ export default function ChargeSheetForm({
 
         {error && <div className="err">{error}</div>}
 
-        <button className="primary" type="submit" disabled={busy || tooShort || namedButEmpty}>
+        <button className="primary" type="submit" disabled={busy || tooShort || namedButEmpty || dossierMissing}>
           {busy ? "Convening…" : "Convene the tribunal"}
         </button>
         {namedButEmpty && (
           <div className="counter" style={{ textAlign: "left", marginTop: "0.6rem" }}>
             Name at least one seat, or switch to another cast mode.
+          </div>
+        )}
+        {dossierMissing && (
+          <div className="counter" style={{ textAlign: "left", marginTop: "0.6rem" }}>
+            Upload a dossier, or switch to another cast mode.
           </div>
         )}
       </form>

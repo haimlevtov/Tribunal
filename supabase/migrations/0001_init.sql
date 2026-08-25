@@ -21,6 +21,7 @@ drop table if exists verdicts     cascade;
 drop table if exists speeches     cascade;
 drop table if exists participants cascade;
 drop table if exists runs         cascade;
+drop table if exists dossiers     cascade;
 
 drop type if exists run_status     cascade;
 drop type if exists model_mode     cascade;
@@ -33,11 +34,24 @@ drop type if exists verdict_kind   cascade;
 create type run_status   as enum ('queued','forging_cast','advocates_running',
                                   'judges_running','complete','failed','budget_exceeded');
 create type model_mode   as enum ('uniform','per_character');
-create type character_mode as enum ('default','named','auto');
+create type character_mode as enum ('default','named','auto','dossier');
 create type seat_role    as enum ('advocate_for','advocate_against','judge');
 create type verdict_kind as enum ('guilty','not_guilty','hung');
 
 -- ---------------------------------------------------------------- tables
+
+-- An uploaded case dossier: the extracted charge sheet and cast. Kept as its own
+-- row so the character bodies never travel through the browser, and so one upload
+-- can drive several runs (e.g. the same cast in uniform and per-character mode).
+create table dossiers (
+  id           uuid primary key default gen_random_uuid(),
+  filename     text,
+  page_count   int,
+  char_count   int,
+  charge_sheet text,
+  characters   jsonb not null default '[]'::jsonb,
+  created_at   timestamptz not null default now()
+);
 
 create table runs (
   id                      uuid primary key default gen_random_uuid(),
@@ -45,6 +59,7 @@ create table runs (
   model_mode              model_mode not null,
   uniform_model_id        text,
   character_mode          character_mode not null default 'default',
+  dossier_id              uuid references dossiers(id) on delete set null,
   status                  run_status not null default 'queued',
   error                   text,
   total_prompt_tokens     int not null default 0,
@@ -150,13 +165,14 @@ create trigger llm_calls_bump_totals
 -- goes through the server. This is the spec's "nothing secret lives in the
 -- browser" rule enforced at the database rather than by convention.
 
+alter table dossiers     enable row level security;
 alter table runs         enable row level security;
 alter table participants enable row level security;
 alter table speeches     enable row level security;
 alter table verdicts     enable row level security;
 alter table llm_calls    enable row level security;
 
-revoke all on runs, participants, speeches, verdicts, llm_calls from anon, authenticated;
+revoke all on dossiers, runs, participants, speeches, verdicts, llm_calls from anon, authenticated;
 
 -- ------------------------------------------------------- refresh the API
 -- PostgREST serves the REST API from a cached copy of the schema. Supabase

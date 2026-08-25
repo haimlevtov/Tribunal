@@ -5,16 +5,28 @@ import {
   assignModels,
   createParticipants,
   executeRun,
+  type ReadyCast,
   type SeatNames,
 } from "@/lib/orchestrator";
 import { PERSONA_KEYS } from "@/lib/personas";
 import { CreateRunInput } from "@/lib/schemas";
+import { z } from "zod";
 import { describeSetupError } from "@/lib/setup-errors";
 
 export const runtime = "nodejs";
 // The background work runs inside this invocation via waitUntil, so the ceiling
 // has to cover the whole tribunal, not just the response. 300s is the Hobby max.
 export const maxDuration = 300;
+
+/** Shape check for the cast stored on a dossier row. */
+const ReadyCastRow = z.array(
+  z.object({
+    key: z.string(),
+    name: z.string(),
+    blurb: z.string(),
+    body: z.string(),
+  }),
+);
 
 /** Cheap abuse ceiling. No IPs stored — a global cap is enough for a class demo. */
 const MAX_RUNS_PER_DAY = 40;
@@ -99,6 +111,46 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Dossier mode: the cast was written when the PDF was uploaded, so it is
+    // read from the server's own record rather than accepted from the browser.
+    // The client only ever hands back an id.
+    let cast: ReadyCast = null;
+    let dossierId: string | null = null;
+
+    if (input.character_mode === "dossier") {
+      if (!input.dossier_id) {
+        return NextResponse.json(
+          { error: "Upload a case dossier first." },
+          { status: 400 },
+        );
+      }
+
+      const { data: dossier, error: dErr } = await db()
+        .from("dossiers")
+        .select("id, characters")
+        .eq("id", input.dossier_id)
+        .maybeSingle();
+
+      if (dErr) throw new Error(dErr.message);
+      if (!dossier) {
+        return NextResponse.json(
+          { error: "That dossier could not be found. Upload it again." },
+          { status: 404 },
+        );
+      }
+
+      const parsed = ReadyCastRow.safeParse(dossier.characters);
+      if (!parsed.success || parsed.data.length === 0) {
+        return NextResponse.json(
+          { error: "That dossier has no usable cast. Upload it again." },
+          { status: 422 },
+        );
+      }
+
+      cast = parsed.data;
+      dossierId = dossier.id;
+    }
+
     if ((await runsInLastDay()) >= MAX_RUNS_PER_DAY) {
       return NextResponse.json(
         { error: "Daily run limit reached. Try again tomorrow." },
@@ -113,6 +165,7 @@ export async function POST(request: Request) {
         model_mode: input.model_mode,
         uniform_model_id: uniformModelId,
         character_mode: input.character_mode,
+        dossier_id: dossierId,
         status: "queued",
       })
       .select()
@@ -123,7 +176,7 @@ export async function POST(request: Request) {
     }
 
     const models = assignModels(input.model_mode, uniformModelId);
-    await createParticipants(run.id, models, input.character_mode, seatNames);
+    await createParticipants(run.id, models, input.character_mode, seatNames, cast);
 
     await runInBackground(executeRun(run.id));
 

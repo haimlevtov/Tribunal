@@ -140,6 +140,11 @@ async function callOnce(
     max_tokens: maxTokens,
     // Without this, OpenRouter omits `cost` from the usage object entirely.
     usage: { include: true },
+    // Every free model is now a reasoning model, and by default the chain of
+    // thought arrives in `content` — so the JSON never appears and the response
+    // stops at max_tokens mid-thought. Excluding it puts the answer back in
+    // `content`, where the parser expects it.
+    reasoning: { exclude: true },
   };
 
   const rf = responseFormatFor(model, jsonSchema);
@@ -296,6 +301,11 @@ export async function callForJson<T>(opts: CallOptions<T>): Promise<CallResult<T
       if (result.success) {
         return { data: result.data, modelId: model.id, attempts };
       }
+
+      // Record why the response was rejected. Without this the attempt row keeps
+      // `error: undefined` (the HTTP call did succeed) and the run reports the
+      // useless "Last error: unknown" when the chain is exhausted.
+      raw.attempt.error = `schema validation failed: ${result.error.message.slice(0, 300)}`;
 
       // One repair pass: hand the model its own bad output plus the error.
       if (!repairUsed) {

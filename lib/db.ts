@@ -39,7 +39,7 @@ export type RunStatus =
   | "budget_exceeded";
 
 export type ModelMode = "uniform" | "per_character";
-export type CharacterMode = "default" | "named" | "auto";
+export type CharacterMode = "default" | "named" | "auto" | "dossier";
 export type SeatRole = "advocate_for" | "advocate_against" | "judge";
 export type VerdictKind = "guilty" | "not_guilty" | "hung";
 

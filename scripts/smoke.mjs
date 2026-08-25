@@ -32,13 +32,13 @@ if (!KEY) {
 }
 
 const MODELS = [
-  ["defence_1", "google/gemma-4-26b-a4b-it:free", "strict"],
-  ["defence_2", "openai/gpt-oss-20b:free", "strict"],
-  ["prosecution_1", "google/gemma-4-31b-it:free", "json_object"],
-  ["prosecution_2", "liquid/lfm-2.5-2.6b:free", "strict"],
-  ["judge_1", "nvidia/nemotron-3-super-120b-a12b:free", "strict"],
-  ["judge_2", "dots-studio/dots-3-note-preview:free", "strict"],
-  ["judge_3", "nvidia/nemotron-nano-9b-v2:free", "strict"],
+  ["judge_1", "dots-studio/dots-3-note-preview:free", "strict"],
+  ["judge_2", "nvidia/nemotron-3-super-120b-a12b:free", "strict"],
+  ["judge_3", "z-ai/glm-5.2:free", "strict"],
+  ["defence_1", "google/gemma-4-26b-a4b-it:free", "json_object"],
+  ["defence_2", "google/gemma-4-31b-it:free", "json_object"],
+  ["prosecution_1", "minimax/minimax-m2.7:free", "json_object"],
+  ["prosecution_2", "nvidia/nemotron-3-ultra-550b-a55b:free", "prompt_only"],
 ];
 
 const SCHEMA = {
@@ -73,9 +73,10 @@ async function probe(modelId, jsonMode) {
           "Charge: the accused took the last coffee and did not start a new pot. Rule on it in one sentence.",
       },
     ],
-    max_tokens: 300,
+    max_tokens: 2000,
     temperature: 0.3,
     usage: { include: true },
+    reasoning: { exclude: true },
   };
 
   if (jsonMode === "strict") body.response_format = { type: "json_schema", json_schema: SCHEMA };

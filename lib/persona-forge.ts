@@ -125,7 +125,7 @@ export async function forgeCast(
     jsonSchema: CAST_JSON_SCHEMA,
     model: FORGE_MODEL,
     temperature: 1.0, // the forge should be inventive; the tribunal itself is not
-    maxTokens: 3000,
+    maxTokens: 7000,
   });
 
   // Match by seat key, falling back to position — models occasionally rename the
@@ -135,7 +135,8 @@ export async function forgeCast(
 
   return PERSONAS.map((seat, i) => {
     const c = byKey.get(seat.key) ?? returned[i];
-    if (!c) throw new Error(`forge returned no character for seat ${seat.key}`);
+    // A skipped seat falls back to its default character rather than failing the run.
+    if (!c) return { key: seat.key, name: seat.name, blurb: seat.blurb, body: seat.body };
 
     return {
       key: seat.key,
