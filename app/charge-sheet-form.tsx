@@ -200,22 +200,82 @@ export default function ChargeSheetForm({
           />
           <div className="counter">
             {chargeSheet.length} / {CHARGE_SHEET_MAX}
-            {chargeSheet.length === 0 && (
-              <>
-                {" · "}
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setChargeSheet(EXAMPLE);
-                  }}
-                >
-                  use an example
-                </a>
-              </>
-            )}
+          </div>
+          {chargeSheet !== EXAMPLE && (
+            <button
+              type="button"
+              className="example"
+              onClick={() => setChargeSheet(EXAMPLE)}
+            >
+              <span className="example-title">
+                Load the example case — The Realm v. Jon Snow
+              </span>
+              <span className="example-sub">
+                Case T-001: was Jon Snow&apos;s killing of Daenerys Targaryen justified?
+                The dossier&apos;s canonical charge sheet, word for word.
+              </span>
+            </button>
+          )}
+        </div>
+
+        <div className="field">
+          <label>Model configuration</label>
+          <div className="modes">
+            <div
+              className={`mode${modelMode === "uniform" ? " on" : ""}`}
+              onClick={() => setModelMode("uniform")}
+            >
+              <div className="t">
+                <input
+                  type="radio"
+                  name="mode"
+                  checked={modelMode === "uniform"}
+                  onChange={() => setModelMode("uniform")}
+                />
+                One model, seven personalities
+              </div>
+              <div className="d">
+                All four advocates and all three judges run on the same model.
+                Differences come purely from personality — the clean experiment.
+              </div>
+            </div>
+
+            <div
+              className={`mode${modelMode === "per_character" ? " on" : ""}`}
+              onClick={() => setModelMode("per_character")}
+            >
+              <div className="t">
+                <input
+                  type="radio"
+                  name="mode"
+                  checked={modelMode === "per_character"}
+                  onChange={() => setModelMode("per_character")}
+                />
+                A different model per character
+              </div>
+              <div className="d">
+                Seven distinct models, one per seat. More varied, but personality and
+                model are now confounded.
+              </div>
+            </div>
           </div>
         </div>
+
+        {modelMode === "uniform" && (
+          <div className="field">
+            <label htmlFor="model">Model for all seven</label>
+            <select id="model" value={model} onChange={(e) => setModel(e.target.value)}>
+              {choices.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <div className="counter">
+              <span className="free">Every option is free</span> — this run costs $0.00.
+            </div>
+          </div>
+        )}
 
         <div className="field">
           <label>Who sits on the tribunal</label>
@@ -418,65 +478,6 @@ export default function ChargeSheetForm({
             <div className="counter">
               Leave any seat blank and the backend will invent that one. A name that
               contradicts its side keeps the name — the seat always wins.
-            </div>
-          </div>
-        )}
-
-        <div className="field">
-          <label>Model configuration</label>
-          <div className="modes">
-            <div
-              className={`mode${modelMode === "uniform" ? " on" : ""}`}
-              onClick={() => setModelMode("uniform")}
-            >
-              <div className="t">
-                <input
-                  type="radio"
-                  name="mode"
-                  checked={modelMode === "uniform"}
-                  onChange={() => setModelMode("uniform")}
-                />
-                One model, seven personalities
-              </div>
-              <div className="d">
-                All four advocates and all three judges run on the same model.
-                Differences come purely from personality — the clean experiment.
-              </div>
-            </div>
-
-            <div
-              className={`mode${modelMode === "per_character" ? " on" : ""}`}
-              onClick={() => setModelMode("per_character")}
-            >
-              <div className="t">
-                <input
-                  type="radio"
-                  name="mode"
-                  checked={modelMode === "per_character"}
-                  onChange={() => setModelMode("per_character")}
-                />
-                A different model per character
-              </div>
-              <div className="d">
-                Seven distinct models, one per seat. More varied, but personality and
-                model are now confounded.
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {modelMode === "uniform" && (
-          <div className="field">
-            <label htmlFor="model">Model for all seven</label>
-            <select id="model" value={model} onChange={(e) => setModel(e.target.value)}>
-              {choices.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-            <div className="counter">
-              <span className="free">Every option is free</span> — this run costs $0.00.
             </div>
           </div>
         )}

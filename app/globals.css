@@ -297,3 +297,37 @@ a { color: var(--accent); }
   font-size: 0.85rem;
   font-family: ui-sans-serif, system-ui, sans-serif;
 }
+
+/* Loads the dossier's canonical case. Deliberately looks like an action rather
+   than the tiny inline link it replaced — in a demo the reader should be able to
+   tell at a glance which scenario it fills in. */
+button.example {
+  display: block;
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.12s, background 0.12s;
+}
+button.example:hover {
+  border-color: var(--accent);
+  border-style: solid;
+}
+button.example .example-title {
+  display: block;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+button.example .example-sub {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.84rem;
+  color: var(--muted);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
