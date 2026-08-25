@@ -113,6 +113,7 @@ export default function ChargeSheetForm({
   const [dossier, setDossier] = useState<DossierResult | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [entry, setEntry] = useState<"example" | "custom" | null>(null);
 
   const tooShort = chargeSheet.trim().length < CHARGE_SHEET_MIN;
   const namedButEmpty =
@@ -186,301 +187,371 @@ export default function ChargeSheetForm({
   const advocates = seats.filter((s) => s.role !== "judge");
   const judges = seats.filter((s) => s.role === "judge");
 
+  /** Start from the canonical case: fixed charge sheet, standing cast, nothing to fill in. */
+  function chooseExample() {
+    setChargeSheet(EXAMPLE);
+    setCastMode("default");
+    setEntry("example");
+  }
+
+  /**
+   * Rendered last in both paths, immediately above "Convene the tribunal", so the
+   * model decision sits with the action it affects rather than above the cast.
+   */
+  const modelConfig = (
+    <>
+      <div className="field">
+        <label>Model configuration</label>
+        <div className="modes">
+          <div
+            className={`mode${modelMode === "uniform" ? " on" : ""}`}
+            onClick={() => setModelMode("uniform")}
+          >
+            <div className="t">
+              <input
+                type="radio"
+                name="mode"
+                checked={modelMode === "uniform"}
+                onChange={() => setModelMode("uniform")}
+              />
+              One model, seven personalities
+            </div>
+            <div className="d">
+              All four advocates and all three judges run on the same model.
+              Differences come purely from personality — the clean experiment.
+            </div>
+          </div>
+
+          <div
+            className={`mode${modelMode === "per_character" ? " on" : ""}`}
+            onClick={() => setModelMode("per_character")}
+          >
+            <div className="t">
+              <input
+                type="radio"
+                name="mode"
+                checked={modelMode === "per_character"}
+                onChange={() => setModelMode("per_character")}
+              />
+              A different model per character
+            </div>
+            <div className="d">
+              Seven distinct models, one per seat. More varied, but personality and
+              model are now confounded.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {modelMode === "uniform" && (
+        <div className="field">
+          <label htmlFor="model">Model for all seven</label>
+          <select id="model" value={model} onChange={(e) => setModel(e.target.value)}>
+            {choices.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <div className="counter">
+            <span className="free">Every option is free</span> — this run costs $0.00.
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  // The opening choice. Everything else stays hidden until one is picked, so the
+  // common case — run the canonical example — is one click rather than a form.
+  if (entry === null) {
+    return (
+      <div className="entry-choice">
+        <button type="button" className="entry" onClick={chooseExample}>
+          <span className="entry-title">Run the example case</span>
+          <span className="entry-sub">
+            <strong>The Realm v. Jon Snow</strong> (Case T-001) — was his killing of
+            Daenerys Targaryen justified? The dossier&apos;s canonical charge sheet,
+            word for word, argued by the standing cast. Nothing to fill in.
+          </span>
+        </button>
+
+        <button type="button" className="entry" onClick={() => setEntry("custom")}>
+          <span className="entry-title">Choose your own</span>
+          <span className="entry-sub">
+            Write your own charge sheet and pick who hears it: the standing cast,
+            characters you name, a cast the system invents for the case, or seven
+            read straight out of a PDF dossier.
+          </span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <>
+      <div className="entry-bar">
+        <span>
+          {entry === "example"
+            ? "Example case — The Realm v. Jon Snow"
+            : "Your own case"}
+        </span>
+        <button type="button" className="linkish" onClick={() => setEntry(null)}>
+          ← back
+        </button>
+      </div>
+
       <form onSubmit={submit}>
-        <div className="field">
-          <label htmlFor="cs">The charge sheet</label>
-          <textarea
-            id="cs"
-            value={chargeSheet}
-            onChange={(e) => setChargeSheet(e.target.value.slice(0, CHARGE_SHEET_MAX))}
-            placeholder="Describe the accused, what they are alleged to have done, and any circumstances the tribunal should weigh…"
-            required
-          />
-          <div className="counter">
-            {chargeSheet.length} / {CHARGE_SHEET_MAX}
-          </div>
-          {chargeSheet !== EXAMPLE && (
-            <button
-              type="button"
-              className="example"
-              onClick={() => setChargeSheet(EXAMPLE)}
-            >
-              <span className="example-title">
-                Load the example case — The Realm v. Jon Snow
-              </span>
-              <span className="example-sub">
-                Case T-001: was Jon Snow&apos;s killing of Daenerys Targaryen justified?
-                The dossier&apos;s canonical charge sheet, word for word.
-              </span>
-            </button>
-          )}
-        </div>
-
-        <div className="field">
-          <label>Model configuration</label>
-          <div className="modes">
-            <div
-              className={`mode${modelMode === "uniform" ? " on" : ""}`}
-              onClick={() => setModelMode("uniform")}
-            >
-              <div className="t">
-                <input
-                  type="radio"
-                  name="mode"
-                  checked={modelMode === "uniform"}
-                  onChange={() => setModelMode("uniform")}
-                />
-                One model, seven personalities
-              </div>
-              <div className="d">
-                All four advocates and all three judges run on the same model.
-                Differences come purely from personality — the clean experiment.
-              </div>
-            </div>
-
-            <div
-              className={`mode${modelMode === "per_character" ? " on" : ""}`}
-              onClick={() => setModelMode("per_character")}
-            >
-              <div className="t">
-                <input
-                  type="radio"
-                  name="mode"
-                  checked={modelMode === "per_character"}
-                  onChange={() => setModelMode("per_character")}
-                />
-                A different model per character
-              </div>
-              <div className="d">
-                Seven distinct models, one per seat. More varied, but personality and
-                model are now confounded.
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {modelMode === "uniform" && (
+        {entry === "example" ? (
           <div className="field">
-            <label htmlFor="model">Model for all seven</label>
-            <select id="model" value={model} onChange={(e) => setModel(e.target.value)}>
-              {choices.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-            <div className="counter">
-              <span className="free">Every option is free</span> — this run costs $0.00.
+            <label>The charge sheet</label>
+            <p className="charge-quote scroll">{EXAMPLE}</p>
+            <div className="counter" style={{ textAlign: "left" }}>
+              Reproduced verbatim from the case dossier. Heard by the standing cast —
+              Jon Snow and Tyrion Lannister for the defence, Daenerys Targaryen and
+              Grey Worm for the prosecution, and the Barak, Elon and Shamgar profiles
+              on the bench.{" "}
+              <button
+                type="button"
+                className="linkish"
+                onClick={() => setEntry("custom")}
+              >
+                edit this case
+              </button>
             </div>
           </div>
-        )}
-
-        <div className="field">
-          <label>Who sits on the tribunal</label>
-          <div className="modes modes-4">
-            <div
-              className={`mode${castMode === "default" ? " on" : ""}`}
-              onClick={() => setCastMode("default")}
-            >
-              <div className="t">
-                <input
-                  type="radio"
-                  name="cast"
-                  checked={castMode === "default"}
-                  onChange={() => setCastMode("default")}
-                />
-                The standing cast
-              </div>
-              <div className="d">
-                The seven characters below. Known quantities — use these for a
-                repeatable run.
-              </div>
-            </div>
-
-            <div
-              className={`mode${castMode === "named" ? " on" : ""}`}
-              onClick={() => setCastMode("named")}
-            >
-              <div className="t">
-                <input
-                  type="radio"
-                  name="cast"
-                  checked={castMode === "named"}
-                  onChange={() => setCastMode("named")}
-                />
-                Name them yourself
-              </div>
-              <div className="d">
-                You give each seat a name — real, fictional, or a description. The
-                backend writes the personality to match.
+        ) : (
+          <>
+            <div className="field">
+              <label htmlFor="cs">The charge sheet</label>
+              <textarea
+                id="cs"
+                value={chargeSheet}
+                onChange={(e) => setChargeSheet(e.target.value.slice(0, CHARGE_SHEET_MAX))}
+                placeholder="Describe the accused, what they are alleged to have done, and any circumstances the tribunal should weigh…"
+                required
+              />
+              <div className="counter">
+                {chargeSheet.length} / {CHARGE_SHEET_MAX}
+                {chargeSheet !== EXAMPLE && (
+                  <>
+                    {" · "}
+                    <button type="button" className="linkish" onClick={chooseExample}>
+                      fill in the example case
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
-            <div
-              className={`mode${castMode === "auto" ? " on" : ""}`}
-              onClick={() => setCastMode("auto")}
-            >
-              <div className="t">
-                <input
-                  type="radio"
-                  name="cast"
-                  checked={castMode === "auto"}
-                  onChange={() => setCastMode("auto")}
-                />
-                Let the system decide
-              </div>
-              <div className="d">
-                The backend invents a cast chosen to make <em>this</em> case hard to
-                settle.
-              </div>
-            </div>
-            <div
-              className={`mode${castMode === "dossier" ? " on" : ""}`}
-              onClick={() => setCastMode("dossier")}
-            >
-              <div className="t">
-                <input
-                  type="radio"
-                  name="cast"
-                  checked={castMode === "dossier"}
-                  onChange={() => setCastMode("dossier")}
-                />
-                Upload a case dossier
-              </div>
-              <div className="d">
-                Read the charge sheet and all seven characters straight out of a
-                PDF case file.
-              </div>
-            </div>
-          </div>
-          {(castMode === "named" || castMode === "auto") && (
-            <div className="counter">
-              Adds one model call to the run (8 instead of 7). Still free.
-            </div>
-          )}
-          {castMode === "dossier" && (
-            <div className="counter">
-              The dossier is read once on upload, so the run itself is still 7 calls.
-            </div>
-          )}
-        </div>
-
-        {castMode === "dossier" && (
-          <div className="field">
-            <label htmlFor="pdf">Case dossier (PDF)</label>
-            <input
-              id="pdf"
-              type="file"
-              accept="application/pdf,.pdf"
-              disabled={uploading}
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) uploadDossier(f);
-              }}
-            />
-            <div className="counter">
-              A charge sheet plus profiles for four advocates and three judges.
-              Text PDFs only — a scan would need OCR first.
-            </div>
-
-            {uploading && (
-              <div className="status" style={{ marginTop: "0.9rem" }}>
-                <span className="dot" />
-                Reading the dossier…
-              </div>
-            )}
-
-            {uploadError && <div className="err">{uploadError}</div>}
-
-            {dossier && (
-              <>
-                <div className="counter" style={{ textAlign: "left", marginTop: "0.9rem" }}>
-                  Read {dossier.page_count} page{dossier.page_count === 1 ? "" : "s"}
-                  {dossier.case_title ? ` · ${dossier.case_title}` : ""}
-                  {dossier.charge_sheet
-                    ? " · the charge sheet above was filled in from it and can be edited"
-                    : " · no charge sheet found, so write one above"}
-                </div>
-
-                <div className="seat-grid" style={{ marginTop: "0.9rem" }}>
-                  {dossier.characters.map((c) => {
-                    const seat = seats.find((x) => x.key === c.key);
-                    return (
-                      <div className="card" key={c.key} style={{ marginBottom: 0 }}>
-                        <h3 style={{ fontSize: "0.98rem" }}>
-                          {c.name}{" "}
-                          {c.source === "invented" && (
-                            <span className="tag model">invented</span>
-                          )}
-                        </h3>
-                        <div className="meta" style={{ marginBottom: 0 }}>
-                          <span
-                            className={`tag ${
-                              seat?.role === "advocate_for"
-                                ? "for"
-                                : seat?.role === "advocate_against"
-                                  ? "against"
-                                  : "model"
-                            }`}
-                          >
-                            {seat ? SIDE_LABEL[seat.role] : c.key}
-                          </span>{" "}
-                          {c.blurb}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="counter" style={{ textAlign: "left" }}>
-                  Characters based on real people follow the document&apos;s own rule:
-                  their method is adapted, not their identity. Nothing here predicts
-                  how any real person would rule.
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {castMode === "named" && (
-          <div className="field">
-            <label>The seven seats</label>
-            <div className="seat-grid">
-              {seats.map((s) => (
-                <div className="seat" key={s.key}>
-                  <div className="seat-role">
-                    <span
-                      className={`tag ${
-                        s.role === "advocate_for"
-                          ? "for"
-                          : s.role === "advocate_against"
-                            ? "against"
-                            : "model"
-                      }`}
-                    >
-                      {SIDE_LABEL[s.role]}
-                    </span>
+            <div className="field">
+              <label>Who sits on the tribunal</label>
+              <div className="modes modes-4">
+                <div
+                  className={`mode${castMode === "default" ? " on" : ""}`}
+                  onClick={() => setCastMode("default")}
+                >
+                  <div className="t">
+                    <input
+                      type="radio"
+                      name="cast"
+                      checked={castMode === "default"}
+                      onChange={() => setCastMode("default")}
+                    />
+                    The standing cast
                   </div>
-                  <input
-                    type="text"
-                    maxLength={PERSONA_NAME_MAX}
-                    placeholder={NAME_HINTS[s.key] ?? "a character"}
-                    value={names[s.key] ?? ""}
-                    onChange={(e) =>
-                      setNames((n) => ({ ...n, [s.key]: e.target.value }))
-                    }
-                  />
+                  <div className="d">
+                    The seven characters below. Known quantities — use these for a
+                    repeatable run.
+                  </div>
                 </div>
-              ))}
+
+                <div
+                  className={`mode${castMode === "named" ? " on" : ""}`}
+                  onClick={() => setCastMode("named")}
+                >
+                  <div className="t">
+                    <input
+                      type="radio"
+                      name="cast"
+                      checked={castMode === "named"}
+                      onChange={() => setCastMode("named")}
+                    />
+                    Name them yourself
+                  </div>
+                  <div className="d">
+                    You give each seat a name — real, fictional, or a description. The
+                    backend writes the personality to match.
+                  </div>
+                </div>
+
+                <div
+                  className={`mode${castMode === "auto" ? " on" : ""}`}
+                  onClick={() => setCastMode("auto")}
+                >
+                  <div className="t">
+                    <input
+                      type="radio"
+                      name="cast"
+                      checked={castMode === "auto"}
+                      onChange={() => setCastMode("auto")}
+                    />
+                    Let the system decide
+                  </div>
+                  <div className="d">
+                    The backend invents a cast chosen to make <em>this</em> case hard to
+                    settle.
+                  </div>
+                </div>
+
+                <div
+                  className={`mode${castMode === "dossier" ? " on" : ""}`}
+                  onClick={() => setCastMode("dossier")}
+                >
+                  <div className="t">
+                    <input
+                      type="radio"
+                      name="cast"
+                      checked={castMode === "dossier"}
+                      onChange={() => setCastMode("dossier")}
+                    />
+                    Upload a case dossier
+                  </div>
+                  <div className="d">
+                    Read the charge sheet and all seven characters straight out of a
+                    PDF case file.
+                  </div>
+                </div>
+              </div>
+              {(castMode === "named" || castMode === "auto") && (
+                <div className="counter">
+                  Adds one model call to the run (8 instead of 7). Still free.
+                </div>
+              )}
+              {castMode === "dossier" && (
+                <div className="counter">
+                  The dossier is read once on upload, so the run itself is still 7 calls.
+                </div>
+              )}
             </div>
-            <div className="counter">
-              Leave any seat blank and the backend will invent that one. A name that
-              contradicts its side keeps the name — the seat always wins.
-            </div>
-          </div>
+
+            {castMode === "dossier" && (
+              <div className="field">
+                <label htmlFor="pdf">Case dossier (PDF)</label>
+                <input
+                  id="pdf"
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) uploadDossier(f);
+                  }}
+                />
+                <div className="counter">
+                  A charge sheet plus profiles for four advocates and three judges.
+                  Text PDFs only — a scan would need OCR first.
+                </div>
+
+                {uploading && (
+                  <div className="status" style={{ marginTop: "0.9rem" }}>
+                    <span className="dot" />
+                    Reading the dossier…
+                  </div>
+                )}
+
+                {uploadError && <div className="err">{uploadError}</div>}
+
+                {dossier && (
+                  <>
+                    <div className="counter" style={{ textAlign: "left", marginTop: "0.9rem" }}>
+                      Read {dossier.page_count} page{dossier.page_count === 1 ? "" : "s"}
+                      {dossier.case_title ? ` · ${dossier.case_title}` : ""}
+                      {dossier.charge_sheet
+                        ? " · the charge sheet above was filled in from it and can be edited"
+                        : " · no charge sheet found, so write one above"}
+                    </div>
+
+                    <div className="seat-grid" style={{ marginTop: "0.9rem" }}>
+                      {dossier.characters.map((c) => {
+                        const seat = seats.find((x) => x.key === c.key);
+                        return (
+                          <div className="card" key={c.key} style={{ marginBottom: 0 }}>
+                            <h3 style={{ fontSize: "0.98rem" }}>
+                              {c.name}{" "}
+                              {c.source === "invented" && (
+                                <span className="tag model">invented</span>
+                              )}
+                            </h3>
+                            <div className="meta" style={{ marginBottom: 0 }}>
+                              <span
+                                className={`tag ${
+                                  seat?.role === "advocate_for"
+                                    ? "for"
+                                    : seat?.role === "advocate_against"
+                                      ? "against"
+                                      : "model"
+                                }`}
+                              >
+                                {seat ? SIDE_LABEL[seat.role] : c.key}
+                              </span>{" "}
+                              {c.blurb}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="counter" style={{ textAlign: "left" }}>
+                      Characters based on real people follow the document&apos;s own rule:
+                      their method is adapted, not their identity. Nothing here predicts
+                      how any real person would rule.
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {castMode === "named" && (
+              <div className="field">
+                <label>The seven seats</label>
+                <div className="seat-grid">
+                  {seats.map((s) => (
+                    <div className="seat" key={s.key}>
+                      <div className="seat-role">
+                        <span
+                          className={`tag ${
+                            s.role === "advocate_for"
+                              ? "for"
+                              : s.role === "advocate_against"
+                                ? "against"
+                                : "model"
+                          }`}
+                        >
+                          {SIDE_LABEL[s.role]}
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        maxLength={PERSONA_NAME_MAX}
+                        placeholder={NAME_HINTS[s.key] ?? "a character"}
+                        value={names[s.key] ?? ""}
+                        onChange={(e) =>
+                          setNames((n) => ({ ...n, [s.key]: e.target.value }))
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="counter">
+                  Leave any seat blank and the backend will invent that one. A name that
+                  contradicts its side keeps the name — the seat always wins.
+                </div>
+              </div>
+            )}
+          </>
         )}
+
+        {modelConfig}
 
         {requiresAccessCode && (
           <div className="field">
@@ -497,7 +568,11 @@ export default function ChargeSheetForm({
 
         {error && <div className="err">{error}</div>}
 
-        <button className="primary" type="submit" disabled={busy || tooShort || namedButEmpty || dossierMissing}>
+        <button
+          className="primary"
+          type="submit"
+          disabled={busy || tooShort || namedButEmpty || dossierMissing}
+        >
           {busy ? "Convening…" : "Convene the tribunal"}
         </button>
         {namedButEmpty && (
