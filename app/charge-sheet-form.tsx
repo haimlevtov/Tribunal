@@ -102,7 +102,7 @@ export default function ChargeSheetForm({
   requiresAccessCode,
 }: Props) {
   const router = useRouter();
-  const [chargeSheet, setChargeSheet] = useState("");
+  const [chargeSheet, setChargeSheet] = useState(EXAMPLE);
   const [modelMode, setModelMode] = useState<ModelMode>("uniform");
   const [castMode, setCastMode] = useState<CastMode>("default");
   const [names, setNames] = useState<Record<string, string>>({});
@@ -113,7 +113,7 @@ export default function ChargeSheetForm({
   const [dossier, setDossier] = useState<DossierResult | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [entry, setEntry] = useState<"example" | "custom" | null>(null);
+  const [entry, setEntry] = useState<"example" | "custom">("example");
 
   const tooShort = chargeSheet.trim().length < CHARGE_SHEET_MIN;
   const namedButEmpty =
@@ -187,7 +187,7 @@ export default function ChargeSheetForm({
   const advocates = seats.filter((s) => s.role !== "judge");
   const judges = seats.filter((s) => s.role === "judge");
 
-  /** Start from the canonical case: fixed charge sheet, standing cast, nothing to fill in. */
+  /** The canonical case: fixed charge sheet, standing cast, nothing to fill in. */
   function chooseExample() {
     setChargeSheet(EXAMPLE);
     setCastMode("default");
@@ -195,8 +195,18 @@ export default function ChargeSheetForm({
   }
 
   /**
-   * Rendered last in both paths, immediately above "Convene the tribunal", so the
-   * model decision sits with the action it affects rather than above the cast.
+   * Switching to your own case clears the example text so the textarea starts
+   * empty. "Edit this case" below keeps it instead — that is the whole point of
+   * that link.
+   */
+  function chooseCustom(keepText = false) {
+    if (!keepText && chargeSheet === EXAMPLE) setChargeSheet("");
+    setEntry("custom");
+  }
+
+  /**
+   * Rendered immediately above "Convene the tribunal" in both paths, so the model
+   * decision sits with the action it affects.
    */
   const modelConfig = (
     <>
@@ -261,59 +271,56 @@ export default function ChargeSheetForm({
     </>
   );
 
-  // The opening choice. Everything else stays hidden until one is picked, so the
-  // common case — run the canonical example — is one click rather than a form.
-  if (entry === null) {
-    return (
-      <div className="entry-choice">
-        <button type="button" className="entry" onClick={chooseExample}>
-          <span className="entry-title">Run the example case</span>
-          <span className="entry-sub">
-            <strong>The Realm v. Jon Snow</strong> (Case T-001) — was his killing of
-            Daenerys Targaryen justified? The dossier&apos;s canonical charge sheet,
-            word for word, argued by the standing cast. Nothing to fill in.
-          </span>
-        </button>
-
-        <button type="button" className="entry" onClick={() => setEntry("custom")}>
-          <span className="entry-title">Choose your own</span>
-          <span className="entry-sub">
-            Write your own charge sheet and pick who hears it: the standing cast,
-            characters you name, a cast the system invents for the case, or seven
-            read straight out of a PDF dossier.
-          </span>
-        </button>
-      </div>
-    );
-  }
-
   return (
     <>
-      <div className="entry-bar">
-        <span>
-          {entry === "example"
-            ? "Example case — The Realm v. Jon Snow"
-            : "Your own case"}
-        </span>
-        <button type="button" className="linkish" onClick={() => setEntry(null)}>
-          ← back
-        </button>
-      </div>
-
       <form onSubmit={submit}>
+        {/* The example is selected on arrival, so the shortest path to a run is a
+            single click on Convene. */}
+        <div className="field">
+          <label>What is the tribunal hearing?</label>
+          <div className="entry-choice">
+            <button
+              type="button"
+              className={`entry${entry === "example" ? " on" : ""}`}
+              onClick={chooseExample}
+            >
+              <span className="entry-title">The example case</span>
+              <span className="entry-sub">
+                <strong>The Realm v. Jon Snow</strong> (Case T-001) — was his killing
+                of Daenerys Targaryen justified? The dossier&apos;s charge sheet, word
+                for word, argued by the standing cast. Nothing to fill in.
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className={`entry${entry === "custom" ? " on" : ""}`}
+              onClick={() => chooseCustom()}
+            >
+              <span className="entry-title">Choose your own</span>
+              <span className="entry-sub">
+                Write your own charge sheet and pick who hears it: the standing cast,
+                characters you name, a cast the system invents for the case, or seven
+                read straight out of a PDF dossier.
+              </span>
+            </button>
+          </div>
+        </div>
+
         {entry === "example" ? (
           <div className="field">
-            <label>The charge sheet</label>
-            <p className="charge-quote scroll">{EXAMPLE}</p>
+            <details className="case-details">
+              <summary>Read the charge sheet — Case T-001</summary>
+              <p className="charge-quote scroll">{EXAMPLE}</p>
+            </details>
             <div className="counter" style={{ textAlign: "left" }}>
-              Reproduced verbatim from the case dossier. Heard by the standing cast —
-              Jon Snow and Tyrion Lannister for the defence, Daenerys Targaryen and
-              Grey Worm for the prosecution, and the Barak, Elon and Shamgar profiles
-              on the bench.{" "}
+              Heard by the standing cast — Jon Snow and Tyrion Lannister for the
+              defence, Daenerys Targaryen and Grey Worm for the prosecution, and the
+              Barak, Elon and Shamgar profiles on the bench.{" "}
               <button
                 type="button"
                 className="linkish"
-                onClick={() => setEntry("custom")}
+                onClick={() => chooseCustom(true)}
               >
                 edit this case
               </button>
@@ -332,14 +339,6 @@ export default function ChargeSheetForm({
               />
               <div className="counter">
                 {chargeSheet.length} / {CHARGE_SHEET_MAX}
-                {chargeSheet !== EXAMPLE && (
-                  <>
-                    {" · "}
-                    <button type="button" className="linkish" onClick={chooseExample}>
-                      fill in the example case
-                    </button>
-                  </>
-                )}
               </div>
             </div>
 
@@ -575,6 +574,11 @@ export default function ChargeSheetForm({
         >
           {busy ? "Convening…" : "Convene the tribunal"}
         </button>
+        {tooShort && entry === "custom" && (
+          <div className="counter" style={{ textAlign: "left", marginTop: "0.6rem" }}>
+            Write a charge sheet, or switch back to the example case.
+          </div>
+        )}
         {namedButEmpty && (
           <div className="counter" style={{ textAlign: "left", marginTop: "0.6rem" }}>
             Name at least one seat, or switch to another cast mode.

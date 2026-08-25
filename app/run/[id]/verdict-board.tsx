@@ -38,7 +38,7 @@ interface RunView {
   error: string | null;
   charge_sheet: string;
   model_mode: "uniform" | "per_character";
-  character_mode: "default" | "named" | "auto";
+  character_mode: "default" | "named" | "auto" | "dossier";
   uniform_model_label: string | null;
   advocates: Advocate[];
   judges: Judge[];
@@ -159,7 +159,11 @@ export default function VerdictBoard({ runId }: { runId: string }) {
         {run.character_mode !== "default" && (
           <>
             {" · "}
-            {run.character_mode === "named" ? "cast you named" : "cast chosen by the system"}
+            {run.character_mode === "named"
+              ? "cast you named"
+              : run.character_mode === "dossier"
+                ? "cast read from a dossier"
+                : "cast chosen by the system"}
           </>
         )}
       </div>
@@ -168,6 +172,50 @@ export default function VerdictBoard({ runId }: { runId: string }) {
 
       <h2>The charge</h2>
       <p className="charge-quote">{run.charge_sheet}</p>
+
+      {/* Who is sitting, and on what model. Rendered from the moment the run is
+          created, so the setup is visible while the tribunal is still working
+          rather than only once speeches arrive. */}
+      <h2>The tribunal</h2>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Seat</th>
+              <th>Character</th>
+              <th>Model</th>
+            </tr>
+          </thead>
+          <tbody>
+            {run.advocates.map((a) => (
+              <tr key={`s-${a.id}`}>
+                <td>
+                  <span className={`tag ${a.side}`}>
+                    {a.side === "for" ? "for the accused" : "against the accused"}
+                  </span>
+                </td>
+                <td>
+                  {a.persona_name}
+                  {a.blurb && <div className="meta" style={{ marginBottom: 0 }}>{a.blurb}</div>}
+                </td>
+                <td>{a.model_label}</td>
+              </tr>
+            ))}
+            {run.judges.map((j) => (
+              <tr key={`s-${j.id}`}>
+                <td>
+                  <span className="tag model">judge</span>
+                </td>
+                <td>
+                  {j.persona_name}
+                  {j.blurb && <div className="meta" style={{ marginBottom: 0 }}>{j.blurb}</div>}
+                </td>
+                <td>{j.model_label}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <h2>The verdicts</h2>
       {delivered.length === 0 ? (
