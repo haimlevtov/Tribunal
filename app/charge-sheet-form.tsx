@@ -277,34 +277,19 @@ export default function ChargeSheetForm({
         {/* The example is selected on arrival, so the shortest path to a run is a
             single click on Convene. */}
         <div className="field">
-          <label>What is the tribunal hearing?</label>
-          <div className="entry-choice">
-            <button
-              type="button"
-              className={`entry${entry === "example" ? " on" : ""}`}
-              onClick={chooseExample}
-            >
-              <span className="entry-title">The example case</span>
-              <span className="entry-sub">
-                <strong>The Realm v. Jon Snow</strong> (Case T-001) — was his killing
-                of Daenerys Targaryen justified? The dossier&apos;s charge sheet, word
-                for word, argued by the standing cast. Nothing to fill in.
-              </span>
-            </button>
-
-            <button
-              type="button"
-              className={`entry${entry === "custom" ? " on" : ""}`}
-              onClick={() => chooseCustom()}
-            >
-              <span className="entry-title">Choose your own</span>
-              <span className="entry-sub">
-                Write your own charge sheet and pick who hears it: the standing cast,
-                characters you name, a cast the system invents for the case, or seven
-                read straight out of a PDF dossier.
-              </span>
-            </button>
-          </div>
+          <label htmlFor="entry">What is the tribunal hearing?</label>
+          <select
+            id="entry"
+            value={entry}
+            onChange={(e) =>
+              e.target.value === "example" ? chooseExample() : chooseCustom()
+            }
+          >
+            <option value="example">
+              The example case — The Realm v. Jon Snow (Case T-001)
+            </option>
+            <option value="custom">Choose your own</option>
+          </select>
         </div>
 
         {entry === "example" ? (

@@ -298,55 +298,6 @@ a { color: var(--accent); }
   font-family: ui-sans-serif, system-ui, sans-serif;
 }
 
-/* The opening fork: run the canonical case, or build your own. Two large targets
-   rather than a form, so the common path is one obvious click. */
-.entry-choice {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: 1fr 1fr;
-  margin-bottom: 1rem;
-}
-@media (max-width: 760px) {
-  .entry-choice { grid-template-columns: 1fr; }
-}
-
-button.entry {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 1.4rem 1.5rem;
-  background: var(--panel);
-  color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-family: inherit;
-  transition: border-color 0.12s, box-shadow 0.12s, transform 0.12s;
-}
-button.entry:hover { border-color: var(--accent); }
-button.entry.on {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
-button.entry:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-button.entry .entry-title {
-  display: block;
-  font-weight: 700;
-  font-size: 1.15rem;
-  letter-spacing: -0.01em;
-  margin-bottom: 0.4rem;
-}
-button.entry .entry-sub {
-  display: block;
-  font-size: 0.88rem;
-  line-height: 1.55;
-  color: var(--muted);
-  font-family: ui-sans-serif, system-ui, sans-serif;
-}
-
 /* The example's charge sheet is collapsed by default: available to read, but it
    must not push the Convene button off the first screen. */
 .case-details summary {
