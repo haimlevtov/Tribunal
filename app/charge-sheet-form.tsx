@@ -88,6 +88,16 @@ const NAME_HINTS: Record<string, string> = {
   judge_3: "e.g. my grandmother",
 };
 
+/**
+ * Temporarily hides the "Choose your own" path, leaving only the example case.
+ *
+ * Everything behind it is intact — the charge sheet textarea, the four cast
+ * modes, the dossier upload and the seat names. Flip this to true to bring the
+ * whole thing back; nothing else needs changing. The API still accepts those
+ * modes, so this is a UI decision only.
+ */
+const SHOW_CUSTOM_CASE = false;
+
 const SIDE_LABEL: Record<string, string> = {
   advocate_for: "for the accused",
   advocate_against: "against the accused",
@@ -288,7 +298,7 @@ export default function ChargeSheetForm({
             <option value="example">
               The example case — The Realm v. Jon Snow (Case T-001)
             </option>
-            <option value="custom">Choose your own</option>
+            {SHOW_CUSTOM_CASE && <option value="custom">Choose your own</option>}
           </select>
         </div>
 
@@ -301,14 +311,19 @@ export default function ChargeSheetForm({
             <div className="counter" style={{ textAlign: "left" }}>
               Heard by the standing cast — Jon Snow and Tyrion Lannister for the
               defence, Daenerys Targaryen and Grey Worm for the prosecution, and the
-              Barak, Elon and Shamgar profiles on the bench.{" "}
-              <button
-                type="button"
-                className="linkish"
-                onClick={() => chooseCustom(true)}
-              >
-                edit this case
-              </button>
+              Barak, Elon and Shamgar profiles on the bench.
+              {SHOW_CUSTOM_CASE && (
+                <>
+                  {" "}
+                  <button
+                    type="button"
+                    className="linkish"
+                    onClick={() => chooseCustom(true)}
+                  >
+                    edit this case
+                  </button>
+                </>
+              )}
             </div>
           </div>
         ) : (
