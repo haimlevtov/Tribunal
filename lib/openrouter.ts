@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { fallbackChain, type ModelSpec } from "./models";
+import { estimateCostUsd, fallbackChain, type ModelSpec } from "./models";
 import type { JsonSchemaSpec } from "./schemas";
 
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
@@ -238,8 +238,14 @@ export async function callForJson<T>(opts: CallOptions<T>): Promise<CallResult<T
 
   for (const model of chain) {
     if (!model.free && opts.onPaidAttempt) {
-      // Rough pre-flight estimate; the guard decides whether to allow it.
-      await opts.onPaidAttempt(0.002);
+      // Pre-flight estimate from this model's catalogue price, deliberately
+      // pessimistic: the whole retry allowance, each attempt assumed to run to
+      // max_tokens. A guard that under-estimates is a guard that lets the last
+      // call through. ~4 chars to the token is close enough for a ceiling.
+      const promptTokens = (opts.system.length + opts.user.length) / 4;
+      await opts.onPaidAttempt(
+        estimateCostUsd(model, promptTokens, opts.maxTokens) * HTTP_RETRIES,
+      );
     }
 
     const messages = [

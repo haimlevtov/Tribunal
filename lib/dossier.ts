@@ -1,4 +1,5 @@
-import { UNIFORM_CHOICES } from "./models";
+import { assertWithinTotalBudget } from "./budget";
+import { FREE_UNIFORM_CHOICES } from "./models";
 import { callForJson, type CallAttempt } from "./openrouter";
 import { PERSONAS, type SeatRole } from "./personas";
 import {
@@ -19,7 +20,7 @@ import {
  * document groups them, rather than guessing seat by seat.
  */
 
-const EXTRACT_MODEL = UNIFORM_CHOICES[0];
+const EXTRACT_MODEL = FREE_UNIFORM_CHOICES[0];
 
 const SEAT_BRIEF: Record<SeatRole, string> = {
   advocate_for: "argues FOR the accused (defence seat)",
@@ -81,6 +82,10 @@ Return the charge sheet and the seven characters.`;
     model: EXTRACT_MODEL,
     temperature: 0.4, // reading, not inventing — stay close to the document
     maxTokens: 9000,
+    // An upload happens before any run exists, so only the all-time ceiling can
+    // apply here — but it must apply: this call shares the fallback chain and
+    // can end up on a paid model like any other.
+    onPaidAttempt: assertWithinTotalBudget,
   });
 
   const byKey = new Map(data.characters.map((c) => [c.key, c]));

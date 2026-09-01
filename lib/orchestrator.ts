@@ -168,7 +168,12 @@ async function forgeAndPersistCast(
       run.character_mode === "named" ? "named" : "auto",
       run.charge_sheet,
       seatNames,
+      (est) => assertWithinBudget(run.id, est),
     );
+    // The success path has to log too. It did not before, so a forge that landed
+    // on a paid model spent money the ledger never saw — and the ceiling reads
+    // the ledger.
+    await logAttempts(run.id, null, "forge", cast.attempts);
   } catch (err) {
     if (err instanceof OpenRouterError) {
       await logAttempts(run.id, null, "forge", err.attempts);
@@ -183,7 +188,7 @@ async function forgeAndPersistCast(
 
   for (const p of participants) {
     const fallback = personaByKey(p.persona_key);
-    const forged = cast?.find((c) => c.key === p.persona_key);
+    const forged = cast?.seats.find((c) => c.key === p.persona_key);
 
     const patch = {
       persona_name: forged?.name ?? fallback.name,

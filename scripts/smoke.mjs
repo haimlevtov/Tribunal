@@ -41,6 +41,21 @@ const MODELS = [
   ["prosecution_2", "nvidia/nemotron-3-ultra-550b-a55b:free", "prompt_only"],
 ];
 
+/**
+ * The paid fallback roster from lib/models.ts, cheapest first. Probed only with
+ * --paid, because unlike the roster above this one does cost money — a few
+ * hundredths of a cent for the whole sweep, but not nothing.
+ */
+const PAID_MODELS = [
+  ["fallback_1", "upstage/solar-pro4", "strict"],
+  ["fallback_2", "openai/gpt-oss-120b", "strict"],
+  ["fallback_3", "qwen/qwen3-30b-a3b-instruct-2507", "strict"],
+  ["fallback_4", "deepseek/deepseek-v4-flash", "strict"],
+  ["fallback_5", "nvidia/nemotron-3-super-120b-a12b", "strict"],
+];
+
+const PROBE_PAID = process.argv.includes("--paid");
+
 const SCHEMA = {
   name: "smoke",
   strict: true,
@@ -118,40 +133,78 @@ async function probe(modelId, jsonMode) {
   };
 }
 
-console.log("Probing the free model roster (this costs $0)…\n");
-
-let failures = 0;
 let totalCost = 0;
 let costReported = false;
 
-for (const [seat, modelId, jsonMode] of MODELS) {
-  process.stdout.write(`  ${seat.padEnd(15)} ${modelId.padEnd(45)} `);
-  try {
-    const r = await probe(modelId, jsonMode);
-    if (r.cost !== undefined) {
-      costReported = true;
-      totalCost += r.cost;
-    }
-    if (r.ok) {
-      console.log(`✓ ${String(r.ms).padStart(5)}ms  ${r.promptTokens}→${r.completionTokens} tok  $${(r.cost ?? 0).toFixed(6)}`);
-    } else {
+async function sweep(list) {
+  let failures = 0;
+  let noCredit = false;
+
+  for (const [seat, modelId, jsonMode] of list) {
+    process.stdout.write(`  ${seat.padEnd(15)} ${modelId.padEnd(45)} `);
+    try {
+      const r = await probe(modelId, jsonMode);
+      if (r.cost !== undefined) {
+        costReported = true;
+        totalCost += r.cost;
+      }
+      if (r.ok) {
+        console.log(`✓ ${String(r.ms).padStart(5)}ms  ${r.promptTokens}→${r.completionTokens} tok  $${(r.cost ?? 0).toFixed(6)}`);
+      } else {
+        failures++;
+        // 402 and 429 mean opposite things here: one is a dead roster, the other
+        // is a busy minute. Telling them apart is the whole point of the sweep.
+        if (r.detail?.includes("HTTP 402")) noCredit = true;
+        console.log(`✗ ${r.detail}`);
+      }
+    } catch (err) {
       failures++;
-      console.log(`✗ ${r.detail}`);
+      console.log(`✗ ${err.message}`);
     }
-  } catch (err) {
-    failures++;
-    console.log(`✗ ${err.message}`);
   }
+
+  return { failures, noCredit };
+}
+
+console.log("Probing the free model roster (this costs $0)…\n");
+const { failures } = await sweep(MODELS);
+
+let paid = { failures: 0, noCredit: false };
+if (PROBE_PAID) {
+  console.log("\nProbing the paid fallback roster, cheapest first (this costs money)…\n");
+  paid = await sweep(PAID_MODELS);
+} else {
+  console.log("\nPaid fallback roster not probed. Re-run with --paid to check it too.");
 }
 
 console.log("");
 console.log(`Cost reporting: ${costReported ? "✓ usage.cost present" : "✗ no cost field — check `usage: {include: true}`"}`);
 console.log(`Total for this probe: $${totalCost.toFixed(6)}`);
 
+if (PROBE_PAID) {
+  const answered = PAID_MODELS.length - paid.failures;
+  console.log(`\nPaid fallbacks answering: ${answered}/${PAID_MODELS.length}.`);
+
+  if (paid.noCredit) {
+    console.log("A 402 above means the OpenRouter account has no credits, so the paid roster");
+    console.log("cannot catch a failing seat. Add credits, or set ALLOW_PAID_FALLBACK=false to");
+    console.log("go back to a strictly free deployment.");
+  } else if (answered === 0) {
+    console.log("None answered, but none reported 402 either — the roster is busy rather than");
+    console.log("unfunded. Re-run in a minute before changing anything.");
+  }
+  // Paid endpoints rate-limit too. One 429 among several is the chain working as
+  // designed, not a problem: the seat simply takes the next model along.
+}
+
 if (failures > 0) {
-  console.log(`\n${failures}/${MODELS.length} model(s) unavailable.`);
+  console.log(`\n${failures}/${MODELS.length} free model(s) unavailable.`);
   console.log("Free endpoints rotate — the fallback chain in lib/models.ts covers this at runtime.");
   console.log("If ALL failed, the key is likely wrong or you have hit the 50 free requests/day cap.");
+  if (PROBE_PAID && PAID_MODELS.length - paid.failures > 0) {
+    console.log("The paid roster is answering, so those seats would fall through and the run");
+    console.log("would still complete.");
+  }
   process.exit(failures === MODELS.length ? 1 : 0);
 }
 
