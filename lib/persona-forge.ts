@@ -1,5 +1,5 @@
-import { UNIFORM_CHOICES } from "./models";
-import { callForJson } from "./openrouter";
+import { FREE_UNIFORM_CHOICES } from "./models";
+import { callForJson, type CallAttempt } from "./openrouter";
 import { PERSONAS, type SeatRole } from "./personas";
 import { chargeSheetBlock } from "./rubric";
 import {
@@ -24,7 +24,7 @@ import {
  */
 
 /** Capable, free, strict-JSON. The forge is one call, so use the best free option. */
-const FORGE_MODEL = UNIFORM_CHOICES[0];
+const FORGE_MODEL = FREE_UNIFORM_CHOICES[0];
 
 const SEAT_BRIEF: Record<SeatRole, string> = {
   advocate_for:
@@ -105,6 +105,12 @@ export interface ForgedSeat {
   body: string;
 }
 
+export interface ForgeResult {
+  seats: ForgedSeat[];
+  /** Handed back so the forge's own calls reach the cost ledger like any other. */
+  attempts: CallAttempt[];
+}
+
 /**
  * Returns seven seats in PERSONAS order. Throws if the model cannot produce a
  * usable cast — the caller falls back to the default characters rather than
@@ -114,8 +120,9 @@ export async function forgeCast(
   mode: Exclude<CharacterMode, "default">,
   chargeSheet: string,
   names: Record<string, string> = {},
-): Promise<ForgedSeat[]> {
-  const { data } = await callForJson({
+  onPaidAttempt?: (estimatedCostUsd: number) => void | Promise<void>,
+): Promise<ForgeResult> {
+  const { data, attempts } = await callForJson({
     system: FORGE_SYSTEM,
     user:
       mode === "named"
@@ -126,6 +133,9 @@ export async function forgeCast(
     model: FORGE_MODEL,
     temperature: 1.0, // the forge should be inventive; the tribunal itself is not
     maxTokens: 7000,
+    // The forge starts on a free model but shares the same fallback chain, so it
+    // can end up on a paid one. Without this the ceiling would not see it.
+    onPaidAttempt,
   });
 
   // Match by seat key, falling back to position — models occasionally rename the
@@ -133,7 +143,7 @@ export async function forgeCast(
   const returned = data.characters;
   const byKey = new Map(returned.map((c) => [c.key, c]));
 
-  return PERSONAS.map((seat, i) => {
+  const seats = PERSONAS.map((seat, i) => {
     const c = byKey.get(seat.key) ?? returned[i];
     // A skipped seat falls back to its default character rather than failing the run.
     if (!c) return { key: seat.key, name: seat.name, blurb: seat.blurb, body: seat.body };
@@ -147,4 +157,6 @@ export async function forgeCast(
       body: c.body.slice(0, PERSONA_BODY_MAX),
     };
   });
+
+  return { seats, attempts };
 }

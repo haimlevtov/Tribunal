@@ -8,7 +8,12 @@ other's verdicts. The app returns three verdicts, the reasoning behind each, and
 and cost ledger. It deliberately does **not** aggregate the verdicts into one answer: the
 decision is left to you.
 
-Every model in the default configuration is **free**. A complete run costs **$0.00**.
+Every model in the default configuration is **free**: change nothing and a complete run still
+costs **$0.00**. Paid models are available underneath — as the cheapest-first fallback when a
+free endpoint is rate-limited, and as a deliberate choice in the model picker. Spending is
+capped at **$5.00** all-time by `MAX_TOTAL_SPEND_USD`, checked against the ledger before every
+paid call. A whole tribunal on the cheapest paid model is about **$0.002**, so that ceiling is
+worth something on the order of two thousand runs.
 
 See [PLAN.md](PLAN.md) for the architecture and the reasoning behind each decision.
 
@@ -70,6 +75,51 @@ in both modes and compared.
 
 ---
 
+## Two price tiers
+
+The free roster drives the default run and is tried first for every seat. Under it sits a paid
+roster, ordered strictly cheapest-first, that does two jobs: it catches a seat whose free
+endpoint is rate-limited, and it appears in the uniform model picker with its per-run price so
+a run can be put on a paid model on purpose.
+
+| Model | $/Mtok in → out | ~cost per 7-call run |
+|---|---|---|
+| `upstage/solar-pro4` | 0.030 → 0.120 | $0.002 |
+| `openai/gpt-oss-120b` | 0.037 → 0.170 | $0.003 |
+| `qwen/qwen3-30b-a3b-instruct-2507` | 0.048 → 0.193 | $0.003 |
+| `deepseek/deepseek-v4-flash` | 0.075 → 0.150 | $0.004 |
+| `nvidia/nemotron-3-super-120b-a12b` | 0.085 → 0.400 | $0.007 |
+
+Two filters picked that list, and both matter more than price. Every entry advertises
+`structured_outputs`, because a seat that cannot return JSON is not a cheaper seat, it is a lost
+one. And nothing below roughly $0.03/Mtok is included: what is cheaper still is 8B roleplay and
+completion models, and the roster's own rule is that a weak judge poisons a verdict in a way a
+weak advocate does not. The ordering is computed from the prices in the table rather than typed
+by hand, so the cheapest is genuinely tried first however the list is edited.
+
+A seat that falls off a paid model tries the whole **free** tier again before a dearer paid one.
+
+Two ceilings bound it, both read from the ledger — not from a counter in memory, so they survive
+a cold start, a redeploy, and several concurrent invocations:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `MAX_TOTAL_SPEND_USD` | `5.00` | cumulative, all-time, across every run |
+| `MAX_RUN_SPEND_USD` | `0.05` | one run cannot eat the whole allowance |
+| `ALLOW_PAID_FALLBACK` | on | set to exactly `false` for a strictly $0 deployment |
+
+A run that hits a ceiling ends as `budget_exceeded` rather than failing silently. Every attempt
+that reaches a paid model is estimated from that model's catalogue price first — pessimistically,
+at the full retry allowance — so the guard errs towards refusing the call that would cross the
+line.
+
+One gap worth knowing: reading an uploaded dossier happens *before* a run exists, and
+`llm_calls` requires a run id, so that call is checked against the total ceiling but is not
+itself written to the ledger. At a fraction of a cent per upload the drift is immaterial, but it
+is drift.
+
+---
+
 ## Setup
 
 ### 1. Install
@@ -102,8 +152,12 @@ cp .env.example .env.local
 Fill in two values:
 
 - `OPENROUTER_API_KEY` — from [openrouter.ai/keys](https://openrouter.ai/keys). A free account
-  is enough; no credits needed.
+  runs the default configuration; the paid fallback needs credits on the account, and without
+  them a paid attempt simply returns 402 and the seat moves on.
 - `SUPABASE_SERVICE_ROLE_KEY` — Supabase dashboard → Project Settings → API → `service_role`.
+
+The spend ceilings (`ALLOW_PAID_FALLBACK`, `MAX_TOTAL_SPEND_USD`, `MAX_RUN_SPEND_USD`) have
+working defaults and only need setting to change them.
 
 None of these may carry a `NEXT_PUBLIC_` prefix. They must stay server-side.
 
@@ -116,6 +170,14 @@ npm run smoke
 Probes all seven free models, confirms JSON mode works, and confirms OpenRouter is returning
 cost data. Costs $0. If a model or two is unavailable that's normal — the free tier churns
 constantly (see below) and the fallback chain handles it at runtime.
+
+```bash
+npm run smoke -- --paid
+```
+
+Sweeps the paid fallback roster as well, and prints what it actually cost — a few hundredths of
+a cent. Worth running once after adding credits, because a paid roster that answers 402 is not a
+fallback, and you would otherwise only find that out mid-demo.
 
 ### 5. Run
 
@@ -134,9 +196,11 @@ under Settings → Environment Variables, scoped to Production:
 
 | Variable | Where it comes from |
 |---|---|
-| `OPENROUTER_API_KEY` | [openrouter.ai/keys](https://openrouter.ai/keys) — free account, no credits needed |
+| `OPENROUTER_API_KEY` | [openrouter.ai/keys](https://openrouter.ai/keys) — credits needed only for the paid fallback |
 | `SUPABASE_URL` | your Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → `service_role` |
+| `MAX_TOTAL_SPEND_USD` | optional — the all-time paid ceiling. Defaults to `5.00` |
+| `ALLOW_PAID_FALLBACK` | optional — set to `false` for a strictly $0 deployment |
 
 None of them may carry a `NEXT_PUBLIC_` prefix — that would ship them to the browser.
 
@@ -145,9 +209,11 @@ Deployments → latest → ⋯ → Redeploy. Adding a variable alone changes not
 
 The Hobby plan's 300s function ceiling is enough for a full run; `maxDuration` is already set.
 
-Since a deployed URL is public and the free quota is only ~7 runs/day, consider also setting
-`TRIBUNAL_ACCESS_CODE` to a shared phrase. The form then requires it and the API rejects runs
-without it, so a passing crawler can't burn the day's quota before a demo.
+A deployed URL is public, so set `TRIBUNAL_ACCESS_CODE` to a shared phrase. The form then
+requires it and the API rejects runs without it. This mattered when the only cost was the day's
+free quota; now that a run can reach a paid model, it is what stands between a passing crawler
+and the $5 allowance. The ceilings bound the damage either way, but the access code is what
+stops it starting.
 
 ---
 
@@ -173,8 +239,13 @@ answering today, which is not always what the catalogue claims.
 ## Rate limits
 
 OpenRouter's free tier allows **20 requests/minute** and **50 requests/day**. One tribunal is
-7 requests, so that's **7 complete runs per day**. Ample for a class demo, worth knowing before
-you demo live. The app also caps itself at 40 runs/day globally.
+7 requests, so that's **7 complete runs per day** before the free tier is exhausted. The app also
+caps itself at 40 runs/day globally.
+
+With credits on the account that daily wall stops being a wall: seats that would have died on a
+rate-limited free endpoint fall through to the paid roster and the run completes. The eighth run
+of the day costs about a fifth of a cent instead of failing. The binding limit becomes
+`MAX_TOTAL_SPEND_USD`, not the clock.
 
 ---
 
@@ -241,7 +312,7 @@ lib/
   models.ts                 rosters + fallback chains
   openrouter.ts             3-tier JSON, retries, cost capture
   orchestrator.ts           two-wave run engine
-  budget.ts                 spend guard (inert while free-only)
+  budget.ts                 spend guard: per-run and all-time ceilings
   schemas.ts                Zod + JSON Schema
   db.ts                     service-role client
 supabase/migrations/        schema

@@ -13,7 +13,7 @@ interface Seat {
 }
 
 interface Props {
-  choices: Array<{ id: string; label: string }>;
+  choices: Array<{ id: string; label: string; free: boolean; runCostUsd: number }>;
   defaultModel: string;
   seats: Seat[];
   perCharacterLabels: Record<string, string>;
@@ -117,6 +117,7 @@ export default function ChargeSheetForm({
   const [castMode, setCastMode] = useState<CastMode>("default");
   const [names, setNames] = useState<Record<string, string>>({});
   const [model, setModel] = useState(defaultModel);
+  const selected = choices.find((c) => c.id === model);
   const [accessCode, setAccessCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -269,12 +270,23 @@ export default function ChargeSheetForm({
           <select id="model" value={model} onChange={(e) => setModel(e.target.value)}>
             {choices.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.label}
+                {c.label} — {c.free ? "free" : `~$${c.runCostUsd.toFixed(3)} a run`}
               </option>
             ))}
           </select>
           <div className="counter">
-            <span className="free">Every option is free</span> — this run costs $0.00.
+            {selected?.free !== false ? (
+              <>
+                <span className="free">Free</span> — this run costs $0.00. The paid
+                options are priced per run beside their name.
+              </>
+            ) : (
+              <>
+                Paid: roughly <strong>${selected.runCostUsd.toFixed(3)}</strong> for the
+                whole tribunal, seven calls. Spending is capped server-side — see
+                MAX_TOTAL_SPEND_USD.
+              </>
+            )}
           </div>
         </div>
       )}
@@ -423,7 +435,8 @@ export default function ChargeSheetForm({
               </div>
               {(castMode === "named" || castMode === "auto") && (
                 <div className="counter">
-                  Adds one model call to the run (8 instead of 7). Still free.
+                  Adds one model call to the run (8 instead of 7). The cast is forged
+                  on a free model.
                 </div>
               )}
               {castMode === "dossier" && (
