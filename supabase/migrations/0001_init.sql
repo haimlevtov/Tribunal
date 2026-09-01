@@ -96,6 +96,9 @@ create table speeches (
   participant_id uuid not null unique references participants(id) on delete cascade,
   argument       text not null,
   key_points     jsonb not null default '[]'::jsonb,
+  -- The advocate's own account of how they built the case: the counterpart to a
+  -- judge's protocol, so every one of the seven explains itself.
+  reasoning      text,
   created_at     timestamptz not null default now()
 );
 

@@ -233,6 +233,7 @@ async function runAdvocates(
         participant_id: p.id,
         argument: data.argument,
         key_points: data.key_points,
+        reasoning: data.reasoning || null,
       });
       if (error) throw new Error(`could not save speech: ${error.message}`);
 

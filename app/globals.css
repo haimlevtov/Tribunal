@@ -226,6 +226,26 @@ button.primary:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .speech { white-space: pre-wrap; margin: 0 0 1rem; }
 
+/* Every seat explains itself: a judge's protocol, and an advocate's account of
+   how they built the case. Set apart from the speech so the two are not read as
+   one continuous statement. */
+.reasoning {
+  margin-top: 1rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.reasoning-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--muted);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  margin-bottom: 0.45rem;
+}
+
 .points { margin: 0; padding-left: 1.15rem; font-size: 0.93rem; color: var(--muted); }
 .points li { margin-bottom: 0.28rem; }
 

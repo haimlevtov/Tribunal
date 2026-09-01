@@ -78,6 +78,8 @@ export interface SpeechRow {
   participant_id: string;
   argument: string;
   key_points: string[];
+  /** How this advocate chose their line — their counterpart to a judge's protocol. */
+  reasoning: string | null;
   created_at: string;
 }
 

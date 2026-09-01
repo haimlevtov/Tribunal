@@ -86,8 +86,8 @@ contents of [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.
 It is safe to re-run: it drops its own objects first, which also repairs a half-applied schema.
 
 If you already have runs stored that you want to keep, run
-[`0002_dossiers.sql`](supabase/migrations/0002_dossiers.sql) instead — it only adds the dossier
-table and column, and destroys nothing.
+[`0002_dossiers.sql`](supabase/migrations/0002_dossiers.sql) instead — it adds the dossier table,
+the run's dossier reference, and the advocates' `reasoning` column, and destroys nothing.
 
 It creates six tables (`dossiers`, `runs`, `participants`, `speeches`, `verdicts`, `llm_calls`), a trigger
 that maintains per-run token/cost totals, and enables RLS with **no** permissive policies —
@@ -201,6 +201,14 @@ latency, and the OpenRouter generation id. Cost comes from `usage: { include: tr
 request — without that flag OpenRouter omits the cost field entirely.
 
 The UI shows a per-model breakdown and a run total at the bottom of every verdict page.
+
+---
+
+## Every character explains itself
+
+Each judge returns a **protocol** — the account of how it reached its verdict, which points it credited, and which it rejected. Each advocate now returns the same kind of note: how it chose its line of argument, which facts it leaned on, which it had to work around, and where it knows the case is weakest. The advocates are told that note is for the record rather than for the tribunal, so it can concede what the speech never would.
+
+Both appear on the run page under the speech or verdict they explain.
 
 ---
 

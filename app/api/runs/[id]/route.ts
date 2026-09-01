@@ -78,6 +78,7 @@ export async function GET(
           side: p.role === "advocate_for" ? "for" : "against",
           argument: s?.argument ?? null,
           key_points: s?.key_points ?? [],
+          reasoning: s?.reasoning ?? null,
         };
       });
 

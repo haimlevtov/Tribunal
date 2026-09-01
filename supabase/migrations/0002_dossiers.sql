@@ -26,6 +26,11 @@ create table if not exists dossiers (
 alter table runs
   add column if not exists dossier_id uuid references dossiers(id) on delete set null;
 
+-- Each advocate now records how it built its case, the counterpart to a judge's
+-- protocol, so all seven seats explain themselves.
+alter table speeches
+  add column if not exists reasoning text;
+
 alter table dossiers enable row level security;
 revoke all on dossiers from anon, authenticated;
 

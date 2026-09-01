@@ -11,6 +11,8 @@ interface Advocate {
   model_label: string;
   argument: string | null;
   key_points: string[];
+  /** The advocate's counterpart to a judge's protocol. */
+  reasoning: string | null;
 }
 
 interface Judge {
@@ -264,7 +266,7 @@ export default function VerdictBoard({ runId }: { runId: string }) {
         </>
       )}
 
-      <h2>The protocol</h2>
+      <h2>The protocol — how each judge decided</h2>
       {delivered.length === 0 ? (
         <p className="meta">Reasoning appears once the bench has ruled.</p>
       ) : (
@@ -278,8 +280,17 @@ export default function VerdictBoard({ runId }: { runId: string }) {
                   {j.verdict ? VERDICT_TEXT[j.verdict] : ""}
                 </span>
               </h3>
-              <div className="meta">{j.blurb}</div>
-              <p className="speech">{j.reasoning}</p>
+              <div className="meta">
+                {j.blurb} · <span className="tag model">{j.model_label}</span>
+              </div>
+              <div className="reasoning">
+                <div className="reasoning-label">
+                  Why {j.persona_name} ruled this way
+                </div>
+                <p className="speech" style={{ marginBottom: 0 }}>
+                  {j.reasoning}
+                </p>
+              </div>
               {j.points_credited.length > 0 && (
                 <>
                   <div className="meta" style={{ marginBottom: "0.3rem" }}>
@@ -332,6 +343,16 @@ export default function VerdictBoard({ runId }: { runId: string }) {
                       <li key={i}>{p}</li>
                     ))}
                   </ul>
+                )}
+                {a.reasoning && (
+                  <div className="reasoning">
+                    <div className="reasoning-label">
+                      How {a.persona_name} built this case
+                    </div>
+                    <p className="speech" style={{ marginBottom: 0 }}>
+                      {a.reasoning}
+                    </p>
+                  </div>
                 )}
               </>
             ) : (

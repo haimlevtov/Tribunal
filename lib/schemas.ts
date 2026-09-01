@@ -7,6 +7,11 @@ import { z } from "zod";
 export const SpeechOutput = z.object({
   argument: z.string().min(1).max(8000),
   key_points: z.array(z.string().min(1).max(400)).min(1).max(6),
+  /**
+   * The advocate's counterpart to a judge's protocol: how they chose this line of
+   * argument. Optional so a run survives a model that omits it.
+   */
+  reasoning: z.string().max(4000).optional().default(""),
 });
 export type SpeechOutput = z.infer<typeof SpeechOutput>;
 
@@ -84,8 +89,13 @@ export const SPEECH_JSON_SCHEMA: JsonSchemaSpec = {
         description: "3-5 discrete claims this speech rests on.",
         items: { type: "string" },
       },
+      reasoning: {
+        type: "string",
+        description:
+          "How you chose this line of argument: which facts you leaned on, which you had to work around, and where your case is weakest. Written to the reader, not to the tribunal.",
+      },
     },
-    required: ["argument", "key_points"],
+    required: ["argument", "key_points", "reasoning"],
   },
 };
 
