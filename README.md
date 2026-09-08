@@ -75,6 +75,11 @@ could never emit it, so each judge had to invert its own conclusion while writin
 and "not justified" pulls straight to `not_guilty`. Widening the offered enum removed the
 inversion, and `npm run verdict-check` guards it.
 
+The stamp then quotes the judge rather than the database. `verdict` stores the mapped kind and
+drives every bit of logic and colour; `verdicts.verdict_as_returned` keeps the word the judge
+actually used, so a justification-framed case is stamped **NOT JUSTIFIED** instead of GUILTY.
+Runs recorded before that column existed have `NULL` there and fall back to the mapped kind.
+
 ## Two model modes
 
 | Mode | What it does | Why |
@@ -144,6 +149,12 @@ Two rules hold it together, and both are load-bearing rather than decorative.
 
 **One ink for the record.** Body, rules, headings, figures and the side tags are all the same
 ink. Nothing is coloured to look important.
+
+**The page opens on paper.** A record is a light document, so `prefers-color-scheme` is
+deliberately not consulted — an OS set to dark still gets paper. Dark is a choice, made with the
+ruled square in the top corner, remembered per device in `localStorage`, and re-applied by a
+small inline script in `layout.tsx` before the first paint so a reload never flashes the wrong
+theme.
 
 **Colour is the verdict, never the judge.** The only colour on the page is the stamp struck on
 each return: ink green for `not_guilty`, stamp red for `guilty`, ochre for `hung`. So a bench
@@ -348,6 +359,7 @@ Both appear on the run page under the speech or verdict they explain.
 ```
 app/
   page.tsx                  charge sheet form (server → client form)
+  theme-toggle.tsx          light/dark switch, remembered per device
   charge-sheet-form.tsx     mode selector, model picker
   run/[id]/                 live verdict board (polls)
   api/runs/                 POST create · GET status+results
@@ -361,7 +373,7 @@ lib/
   budget.ts                 spend guard: per-run and all-time ceilings
   schemas.ts                Zod + JSON Schema
   db.ts                     service-role client
-supabase/migrations/        schema
+supabase/migrations/        schema (0003 adds the verdict wording column)
 scripts/smoke.mjs           roster pre-flight
 scripts/verdict-check.mjs   guards the verdict/reasoning inversion
 ```

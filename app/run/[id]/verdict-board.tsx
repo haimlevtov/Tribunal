@@ -21,6 +21,8 @@ interface Judge {
   blurb: string;
   model_label: string;
   verdict: "guilty" | "not_guilty" | "hung" | null;
+  /** The word this judge actually used. Null on runs predating the column. */
+  verdict_as_returned: string | null;
   confidence: number | null;
   reasoning: string | null;
   points_credited: string[];
@@ -78,6 +80,31 @@ const VERDICT_TEXT = {
   not_guilty: "Not guilty",
   hung: "Hung",
 } as const;
+
+/**
+ * The stamp quotes the judge rather than the database.
+ *
+ * A charge sheet framed "justified / not justified" is answered in those words,
+ * and the answer is then stored as one of three kinds — so a judge who wrote
+ * "the breach was not justified" was stamped GUILTY. Correct kind, wrong word,
+ * sitting directly above the protocol that says otherwise.
+ *
+ * Colour still keys off the stored kind, so justified stays green whichever word
+ * is printed on it.
+ */
+const RETURNED_TEXT: Record<string, string> = {
+  guilty: "Guilty",
+  not_guilty: "Not guilty",
+  justified: "Justified",
+  not_justified: "Not justified",
+  hung: "Hung",
+};
+
+function stampWord(judge: Judge): string {
+  const returned = judge.verdict_as_returned;
+  if (returned && RETURNED_TEXT[returned]) return RETURNED_TEXT[returned];
+  return judge.verdict ? VERDICT_TEXT[judge.verdict] : "";
+}
 
 const POLL_MS = 1500;
 
@@ -331,7 +358,7 @@ export default function VerdictBoard({ runId }: { runId: string }) {
 
               {j.verdict ? (
                 <div className={`stamp s-${j.verdict}`}>
-                  <b>{VERDICT_TEXT[j.verdict]}</b>
+                  <b>{stampWord(j)}</b>
                   {j.confidence !== null && <span>conf. {j.confidence.toFixed(2)}</span>}
                 </div>
               ) : (

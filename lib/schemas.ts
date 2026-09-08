@@ -69,21 +69,48 @@ export const VERDICT_CHOICES = [
 ] as const;
 
 /**
+ * The judge's own word, before it is mapped onto a stored kind.
+ *
+ * Kept only when the judge answered in the offered vocabulary. A model that says
+ * "acquitted" still normalises to `not_guilty` for storage, but there is no
+ * useful word to quote back, so this is null and the display falls back to the
+ * kind.
+ */
+function verdictAsReturned(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const key = v.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return (VERDICT_CHOICES as readonly string[]).includes(key) ? key : null;
+}
+
+/**
  * What each judge returns. `reasoning` is the protocol entry — the account of how
  * this judge got to its verdict, which is half the point of the whole app.
+ *
+ * The object is preprocessed so one answer yields two things: `verdict`, the
+ * kind Postgres stores and everything downstream reasons about, and
+ * `verdict_as_returned`, the word the judge actually used. A judge answering a
+ * justification-framed charge sheet says "not_justified"; that is stored as
+ * `guilty`, which is the right kind and the wrong word to show a reader.
  */
-export const VerdictOutput = z.object({
-  verdict: z.preprocess(normaliseVerdict, z.enum(VERDICT_KINDS)),
-  // Some models send confidence as a string, or as a percentage.
-  confidence: z.coerce
-    .number()
-    .transform((n) => (n > 1 && n <= 100 ? n / 100 : n))
-    .pipe(z.number().min(0).max(1))
-    .catch(0.5),
-  reasoning: z.string().min(1).max(8000),
-  points_credited: z.array(z.string().min(1).max(400)).max(8),
-  points_rejected: z.array(z.string().min(1).max(400)).max(8),
-});
+export const VerdictOutput = z.preprocess(
+  (raw) =>
+    raw && typeof raw === "object" && "verdict" in raw
+      ? { ...raw, verdict_as_returned: verdictAsReturned((raw as Record<string, unknown>).verdict) }
+      : raw,
+  z.object({
+    verdict: z.preprocess(normaliseVerdict, z.enum(VERDICT_KINDS)),
+    verdict_as_returned: z.enum(VERDICT_CHOICES).nullable().catch(null),
+    // Some models send confidence as a string, or as a percentage.
+    confidence: z.coerce
+      .number()
+      .transform((n) => (n > 1 && n <= 100 ? n / 100 : n))
+      .pipe(z.number().min(0).max(1))
+      .catch(0.5),
+    reasoning: z.string().min(1).max(8000),
+    points_credited: z.array(z.string().min(1).max(400)).max(8),
+    points_rejected: z.array(z.string().min(1).max(400)).max(8),
+  }),
+);
 export type VerdictOutput = z.infer<typeof VerdictOutput>;
 
 /** Shape OpenRouter expects under `response_format.json_schema`. */

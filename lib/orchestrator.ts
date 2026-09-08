@@ -309,6 +309,8 @@ async function runJudges(
         run_id: run.id,
         participant_id: p.id,
         verdict: data.verdict,
+        // The judge's own word, kept for display only — see 0003_verdict_wording.sql.
+        verdict_as_returned: data.verdict_as_returned,
         confidence: data.confidence,
         reasoning: data.reasoning,
         points_credited: data.points_credited,

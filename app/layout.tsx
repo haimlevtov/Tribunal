@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Archivo_Narrow, Courier_Prime } from "next/font/google";
+import ThemeToggle from "./theme-toggle";
 import "./globals.css";
 
 /**
@@ -33,10 +34,31 @@ export const metadata: Metadata = {
     "Four advocates argue, three judges rule independently, and the decision is left to you.",
 };
 
+/**
+ * Applies the remembered theme before the first paint.
+ *
+ * Without this the page renders light, then React reads localStorage and flips
+ * to dark — a visible flash on every load for anyone who chose dark. It runs
+ * before the body exists, so there is nothing to flash. The OS preference is
+ * deliberately ignored: the record opens on paper unless the reader has said
+ * otherwise on this device.
+ */
+const THEME_SCRIPT = `try{var t=localStorage.getItem("tribunal-theme");document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light")}catch(e){document.documentElement.setAttribute("data-theme","light")}`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${record.variable} ${caption.variable}`}>
-      <body>{children}</body>
+    <html
+      lang="en"
+      data-theme="light"
+      className={`${record.variable} ${caption.variable}`}
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
+      <body>
+        <ThemeToggle />
+        {children}
+      </body>
     </html>
   );
 }
