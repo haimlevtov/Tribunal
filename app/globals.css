@@ -1,35 +1,58 @@
+/* The Tribunal — the record.
+ *
+ * The page is not an app that reports on a hearing; it is the record of one.
+ * One continuous ruled document, numbered from the appearances block to the
+ * last return, and three returns at the foot that are never totalled.
+ *
+ * Two rules hold the whole thing together:
+ *
+ *   One ink for the record. Body, rules, headings and figures are all the
+ *   same ink. Nothing is coloured to make it look important.
+ *
+ *   Colour is the verdict, never the judge. The only colour on the page is
+ *   the stamp struck on each return, and it names the verdict — so a bench
+ *   that agreed reads as matching stamps and a bench that split reads as
+ *   different ones, before a word has been read. Colouring by judge would
+ *   rank a bench the whole design exists to leave unranked.
+ */
+
 :root {
-  --bg: #f7f5f0;
-  --panel: #fffdf8;
-  --ink: #1c1a17;
-  --muted: #6b645a;
-  --line: #ddd6ca;
-  --accent: #7a2e2e;
-  --for: #2f5d43;
-  --for-bg: #e8f0ea;
-  --against: #7a2e2e;
-  --against-bg: #f5e8e8;
-  --guilty: #7a2e2e;
-  --not-guilty: #2f5d43;
-  --hung: #7a5c1e;
-  --radius: 10px;
+  --paper: #f4f4f0;
+  --ink: #17171a;
+  --rule: #b9b9b0;
+  --margin-rule: #9aa9bd;
+  --hair: #dcdcd4;
+  --faint: #6f6f68;
+  --panel: #eceae4;
+
+  /* Stamp inks. Verdict, not identity. */
+  --s-guilty: #9a2515;
+  --s-not-guilty: #2c6446;
+  --s-hung: #8a6a1f;
+  --stamp-blend: multiply;
+
+  /* Monospace at full width is punishing; the record is a page, not a fluid
+     column. This is the measure everything running-text obeys. */
+  --measure: 70ch;
+  --gutter: 5rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #161513;
-    --panel: #1f1e1b;
-    --ink: #ece8e1;
-    --muted: #9c948a;
-    --line: #35322d;
-    --accent: #c97b7b;
-    --for: #7fc79b;
-    --for-bg: #1d2a22;
-    --against: #d99a9a;
-    --against-bg: #2c1e1e;
-    --guilty: #d99a9a;
-    --not-guilty: #7fc79b;
-    --hung: #d9bb72;
+    --paper: #14161a;
+    --ink: #e4e2da;
+    --rule: #3b3f45;
+    --margin-rule: #5b6b80;
+    --hair: #262a30;
+    --faint: #8b8b84;
+    --panel: #1b1e23;
+
+    /* Re-tuned to read on ink, not naively inverted. The blend flips with
+       them: multiply lays ink into paper, screen lifts it out of dark. */
+    --s-guilty: #e2887a;
+    --s-not-guilty: #6fbf90;
+    --s-hung: #d9bb72;
+    --stamp-blend: screen;
   }
 }
 
@@ -37,317 +60,605 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--paper);
   color: var(--ink);
-  font-family: ui-serif, Georgia, "Times New Roman", serif;
-  line-height: 1.6;
+  font-family: var(--font-record), "Courier New", ui-monospace, monospace;
+  font-size: 0.87rem;
+  line-height: 1.78;
   -webkit-font-smoothing: antialiased;
 }
 
 .wrap {
-  max-width: 980px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: 2.5rem 1.25rem 5rem;
+  padding: 0 0 5rem;
+}
+
+/* ─────────────────────────────────────────────────────── caption block
+   The head of any filed document: the court, the matter, the docket. */
+
+.cap {
+  border-bottom: 2px solid var(--ink);
+  padding: 2.75rem 1.5rem 1.25rem var(--gutter);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.5rem;
+  align-items: end;
+}
+
+.cap-court {
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--faint);
 }
 
 h1 {
-  font-size: clamp(1.9rem, 4vw, 2.6rem);
-  letter-spacing: -0.02em;
-  margin: 0 0 0.35rem;
-}
-
-.sub {
-  color: var(--muted);
-  margin: 0 0 2.25rem;
-  font-size: 1.02rem;
-}
-
-h2 {
-  font-size: 1.2rem;
-  letter-spacing: 0.06em;
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  font-size: clamp(1.5rem, 4vw, 2.1rem);
+  letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: var(--muted);
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 0.5rem;
-  margin: 2.75rem 0 1.25rem;
-  font-weight: 600;
+  margin: 0.4rem 0 0;
+  line-height: 1.12;
+  text-wrap: balance;
 }
+
+.docket {
+  font-size: 0.72rem;
+  text-align: right;
+  color: var(--faint);
+  line-height: 1.55;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.docket b { color: var(--ink); font-weight: 700; }
+
+@media (max-width: 640px) {
+  .cap { grid-template-columns: 1fr; align-items: start; }
+  .docket { text-align: left; }
+}
+
+/* ────────────────────────────────────────────────────────── the record
+   One margin rule the whole way down, with numbered entries hanging in
+   the gutter outside it.
+
+   The mockup numbered every physical line, the way a court transcript
+   does. Real prose wraps, and CSS cannot count wrapped lines — so the
+   record numbers ENTRIES instead, which is how a pleading or an
+   affidavit is numbered anyway. The counter increments in DOM order,
+   and every seat is rendered from the moment the run is created, so a
+   number belongs to a seat and does not shift as the tribunal fills in. */
+
+.record {
+  position: relative;
+  padding: 1.5rem 1.5rem 2rem var(--gutter);
+  counter-reset: entry;
+}
+.record::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--gutter) - 1rem);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--margin-rule);
+}
+
+.entry {
+  counter-increment: entry;
+  position: relative;
+  margin: 0 0 1.5rem;
+  max-width: var(--measure);
+}
+.entry::before {
+  content: counter(entry);
+  position: absolute;
+  left: calc(-1rem - 2.4rem);
+  width: 2rem;
+  text-align: right;
+  color: var(--faint);
+  font-size: 0.72rem;
+  line-height: 1.9;
+}
+/* Sections and the closing sit in the record but are not numbered
+   entries — a heading is not a paragraph of the record. */
+.entry.unnumbered { counter-increment: none; }
+.entry.unnumbered::before { content: none; }
+
+.rubric {
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 2.5rem 0 1.25rem;
+  max-width: var(--measure);
+}
+.rubric:first-child { margin-top: 0; }
+
+/* Speaker designation: the name in the record's own ink, the seat and the
+   model set small beside it. */
+.who {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  display: block;
+  margin-bottom: 0.15rem;
+}
+.seat {
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.66rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-left: 0.6rem;
+  white-space: nowrap;
+}
+
+.said {
+  white-space: pre-wrap;
+  margin: 0.35rem 0 0;
+  padding-left: 2rem;
+}
+
+/* An advocate's account of how they built the case, and a judge's
+   protocol: a note in the record, set off by a rule rather than boxed. */
+.note {
+  border-left: 2px solid var(--hair);
+  margin: 0.9rem 0 0 2rem;
+  padding-left: 1.1rem;
+  color: var(--faint);
+}
+.note-label {
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.64rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.note p { margin: 0; white-space: pre-wrap; }
+
+.points { margin: 0.6rem 0 0 2rem; padding-left: 1.2rem; color: var(--faint); }
+.points li { margin-bottom: 0.25rem; }
+.points-label {
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.64rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 0.9rem 0 0 2rem;
+}
+
+.charge {
+  white-space: pre-wrap;
+  margin: 0;
+  padding-left: 2rem;
+}
+
+.appearance {
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);
+  gap: 0.5rem 1rem;
+  padding-left: 2rem;
+}
+.appearance dt {
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding-top: 0.25rem;
+}
+.appearance dd { margin: 0; }
+.appearance .of { color: var(--faint); font-size: 0.78rem; }
+@media (max-width: 640px) {
+  .appearance { grid-template-columns: 1fr; gap: 0.15rem; }
+  .appearance dd { margin-bottom: 0.6rem; }
+}
+
+/* ───────────────────────────────────────────────────────── the returns
+   Identical blocks in the same numbering. No columns, no bars, no
+   ordering — nothing that offers itself to be averaged. */
+
+.returns { border-top: 2px solid var(--ink); margin-top: 2.5rem; }
+
+.return {
+  border-bottom: 1px solid var(--hair);
+  padding: 1.35rem 0 1.4rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.5rem;
+  align-items: start;
+  max-width: var(--measure);
+}
+@media (max-width: 640px) {
+  .return { grid-template-columns: 1fr; }
+}
+
+/* The stamp: double rule, condensed caps, ink laid into the paper by
+   multiply so the surface shows through, each struck at its own angle
+   because no two strikes line up. The confidence sits inside it the way
+   a date sits in a real stamp. */
+.stamp {
+  color: var(--stamp-ink, var(--ink));
+  border: 2px solid currentColor;
+  box-shadow: inset 0 0 0 1px currentColor;
+  padding: 0.45rem 0.95rem 0.4rem;
+  text-align: center;
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+  mix-blend-mode: var(--stamp-blend);
+  white-space: nowrap;
+  justify-self: end;
+  /* multiply needs opaque stock under it, so the record's paper is the
+     surface it strikes — never a transparent block over the page. */
+  background: transparent;
+}
+.stamp b { display: block; font-size: 1rem; letter-spacing: 0.11em; }
+.stamp span {
+  display: block;
+  font-family: var(--font-record), monospace;
+  font-weight: 400;
+  font-size: 0.63rem;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  border-top: 1px solid currentColor;
+  margin-top: 0.28rem;
+  padding-top: 0.22rem;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+.s-guilty { --stamp-ink: var(--s-guilty); }
+.s-not_guilty { --stamp-ink: var(--s-not-guilty); }
+.s-hung { --stamp-ink: var(--s-hung); }
+
+/* Struck by hand, not typeset. */
+.return:nth-of-type(3n + 1) .stamp { transform: rotate(-3.4deg); }
+.return:nth-of-type(3n + 2) .stamp { transform: rotate(2.1deg); }
+.return:nth-of-type(3n) .stamp { transform: rotate(-1.3deg); }
+
+/* A seat that has not reported yet, or never will. */
+.pending {
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  border: 1px dashed var(--rule);
+  padding: 0.5rem 0.9rem;
+  justify-self: end;
+  white-space: nowrap;
+}
+
+.closing {
+  border-bottom: 2px solid var(--ink);
+  padding: 1.4rem 0 1.6rem;
+  max-width: var(--measure);
+}
+.closing-line {
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-size: 0.86rem;
+}
+.closing-sub { color: var(--faint); font-size: 0.78rem; margin-top: 0.35rem; }
+
+/* ──────────────────────────────────────────────── schedule of costs */
+
+.costs { margin-top: 2rem; max-width: var(--measure); }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+th {
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  text-align: left;
+  padding: 0 0.7rem 0.4rem 0;
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+td {
+  padding: 0.34rem 0.7rem 0.34rem 0;
+  border-bottom: 1px solid var(--hair);
+  font-variant-numeric: tabular-nums;
+}
+td.num, th.num { text-align: right; }
+tr.total td {
+  border-bottom: 0;
+  border-top: 2px solid var(--ink);
+  font-weight: 700;
+  padding-top: 0.5rem;
+}
+.paid { color: var(--s-guilty); }
+.dash { color: var(--faint); }
+
+.tally {
+  color: var(--faint);
+  font-size: 0.76rem;
+  margin-top: 0.9rem;
+}
+
+/* ────────────────────────────────────────────────────── the filing
+   The form is a document being filed, so its fields are ruled entries
+   on a form rather than rounded boxes. */
 
 label {
   display: block;
-  font-size: 0.82rem;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 0.5rem;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
   font-weight: 600;
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 0.35rem;
 }
 
-textarea, select, input[type="password"], input[type="text"] {
+textarea,
+select,
+input[type="password"],
+input[type="text"] {
   width: 100%;
-  background: var(--panel);
+  max-width: var(--measure);
+  background: transparent;
   color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 0.85rem 1rem;
+  border: 0;
+  border-bottom: 1px solid var(--ink);
+  border-radius: 0;
+  padding: 0.4rem 0.15rem;
   font-family: inherit;
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: 0.87rem;
+  line-height: 1.78;
 }
-
+select {
+  /* The native arrow sits oddly on a ruled entry; keep the control obvious
+     without reintroducing a box. */
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--faint) 50%),
+    linear-gradient(135deg, var(--faint) 50%, transparent 50%);
+  background-position: right 0.6rem center, right 0.35rem center;
+  background-size: 0.28rem 0.28rem, 0.28rem 0.28rem;
+  background-repeat: no-repeat;
+  padding-right: 1.4rem;
+  cursor: pointer;
+}
 textarea { min-height: 190px; resize: vertical; }
 
-textarea:focus, select:focus, input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+textarea:focus,
+select:focus,
+input:focus {
+  outline: 2px solid var(--margin-rule);
+  outline-offset: 2px;
 }
 
-.field { margin-bottom: 1.5rem; }
+.field { margin-bottom: 1.6rem; max-width: var(--measure); }
 
 .counter {
-  font-size: 0.8rem;
-  color: var(--muted);
-  text-align: right;
+  font-size: 0.72rem;
+  color: var(--faint);
   margin-top: 0.35rem;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  max-width: var(--measure);
 }
-
-.modes { display: grid; gap: 0.75rem; grid-template-columns: 1fr 1fr; }
-.modes-3 { grid-template-columns: repeat(3, 1fr); }
-.modes-4 { grid-template-columns: repeat(2, 1fr); }
-@media (max-width: 860px) { .modes-3, .modes-4 { grid-template-columns: 1fr; } }
 
 input[type="file"] {
   width: 100%;
-  background: var(--panel);
+  max-width: var(--measure);
+  background: transparent;
   color: var(--ink);
-  border: 1px dashed var(--line);
-  border-radius: var(--radius);
-  padding: 0.9rem 1rem;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.92rem;
+  border: 1px dashed var(--rule);
+  border-radius: 0;
+  padding: 0.8rem 0.9rem;
+  font-family: inherit;
+  font-size: 0.8rem;
   cursor: pointer;
 }
-input[type="file"]:hover { border-color: var(--accent); }
-@media (max-width: 640px) { .modes { grid-template-columns: 1fr; } }
+input[type="file"]:hover { border-color: var(--ink); }
 
-.seat-grid { display: grid; gap: 0.7rem; grid-template-columns: 1fr 1fr; }
-@media (max-width: 640px) { .seat-grid { grid-template-columns: 1fr; } }
-
-.seat-role { margin-bottom: 0.35rem; }
-.seat input[type="text"] { padding: 0.6rem 0.8rem; font-size: 0.95rem; }
-
+/* Options on a form: a ruled list with a struck marker, not a grid of
+   cards. */
+.modes { display: block; max-width: var(--measure); border-top: 1px solid var(--hair); }
 .mode {
-  border: 1px solid var(--line);
-  background: var(--panel);
-  border-radius: var(--radius);
-  padding: 1rem 1.1rem;
+  display: block;
+  border-bottom: 1px solid var(--hair);
+  padding: 0.7rem 0.15rem 0.75rem;
   cursor: pointer;
-  transition: border-color 0.12s, box-shadow 0.12s;
 }
-.mode:hover { border-color: var(--accent); }
-.mode.on {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
-.mode input { margin-right: 0.5rem; }
+.mode:hover { background: var(--panel); }
 .mode .t { font-weight: 700; }
-.mode .d {
-  font-size: 0.88rem;
-  color: var(--muted);
-  margin-top: 0.3rem;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-}
+.mode .d { font-size: 0.78rem; color: var(--faint); margin-top: 0.15rem; padding-left: 1.55rem; }
+.mode input { margin-right: 0.55rem; accent-color: var(--ink); }
+.mode.on .t { text-decoration: underline; text-underline-offset: 0.25em; }
+
+.seat-grid { display: grid; gap: 0.6rem 1.5rem; grid-template-columns: 1fr 1fr; max-width: var(--measure); }
+@media (max-width: 640px) { .seat-grid { grid-template-columns: 1fr; } }
+.seat-role { margin-bottom: 0.2rem; }
 
 button.primary {
-  background: var(--accent);
-  color: #fff;
-  border: 0;
-  border-radius: var(--radius);
-  padding: 0.9rem 2rem;
-  font-size: 1rem;
-  font-family: inherit;
+  background: var(--ink);
+  color: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  padding: 0.65rem 1.7rem;
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.82rem;
   font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
   cursor: pointer;
-  letter-spacing: 0.02em;
+  margin-top: 0.4rem;
 }
-button.primary:hover:not(:disabled) { filter: brightness(1.12); }
-button.primary:disabled { opacity: 0.55; cursor: not-allowed; }
+button.primary:hover:not(:disabled) { background: var(--paper); color: var(--ink); }
+button.primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+button.linkish {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
 
 .err {
-  background: var(--against-bg);
-  border: 1px solid var(--against);
-  color: var(--against);
-  border-radius: var(--radius);
-  padding: 0.85rem 1rem;
+  border: 1px solid var(--s-guilty);
+  border-left-width: 3px;
+  color: var(--s-guilty);
+  padding: 0.75rem 1rem;
   margin: 1rem 0;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.92rem;
+  max-width: var(--measure);
+  font-size: 0.82rem;
 }
 
-.card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 1.25rem 1.4rem;
-  margin-bottom: 1rem;
-}
-
-.card h3 { margin: 0 0 0.15rem; font-size: 1.08rem; }
-
-.meta {
-  font-size: 0.8rem;
-  color: var(--muted);
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  margin-bottom: 0.9rem;
-}
-
-.tag {
-  display: inline-block;
-  font-size: 0.68rem;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  font-weight: 700;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  vertical-align: 0.1em;
-}
-.tag.for { background: var(--for-bg); color: var(--for); }
-.tag.against { background: var(--against-bg); color: var(--against); }
-.tag.model {
-  background: transparent;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  text-transform: none;
-  letter-spacing: 0.02em;
-}
-
-.speech { white-space: pre-wrap; margin: 0 0 1rem; }
-
-/* Every seat explains itself: a judge's protocol, and an advocate's account of
-   how they built the case. Set apart from the speech so the two are not read as
-   one continuous statement. */
-.reasoning {
-  margin-top: 1rem;
-  padding: 0.9rem 1.1rem;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-}
-.reasoning-label {
-  font-size: 0.72rem;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  font-weight: 700;
-  color: var(--muted);
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  margin-bottom: 0.45rem;
-}
-
-.points { margin: 0; padding-left: 1.15rem; font-size: 0.93rem; color: var(--muted); }
-.points li { margin-bottom: 0.28rem; }
-
-.verdicts { display: grid; gap: 1rem; grid-template-columns: repeat(3, 1fr); }
-@media (max-width: 900px) { .verdicts { grid-template-columns: 1fr; } }
-
-.verdict-word {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  margin: 0.5rem 0 0.15rem;
-}
-.v-guilty { color: var(--guilty); }
-.v-not_guilty { color: var(--not-guilty); }
-.v-hung { color: var(--hung); }
-
-.conf {
-  font-size: 0.78rem;
-  color: var(--muted);
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  margin-bottom: 0.9rem;
-}
-
-.bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin-top: 0.3rem; }
-.bar > i { display: block; height: 100%; background: currentColor; }
-
-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; font-family: ui-sans-serif, system-ui, sans-serif; }
-th, td { text-align: left; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--line); }
-th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.06em; }
-td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-.table-scroll { overflow-x: auto; }
+/* ──────────────────────────────────────────────────────────── status */
 
 .status {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.92rem;
-  color: var(--muted);
-  margin-bottom: 1.5rem;
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding: 0.8rem 1.5rem 0.8rem var(--gutter);
+  border-bottom: 1px solid var(--hair);
+  flex-wrap: wrap;
 }
-
 .dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--accent);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink);
   animation: pulse 1.3s ease-in-out infinite;
+  flex: none;
 }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
 @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
 
-.free { color: var(--for); font-weight: 600; }
+.foot {
+  margin: 2.5rem 0 0;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--hair);
+  color: var(--faint);
+  font-size: 0.74rem;
+  max-width: var(--measure);
+}
 
-a { color: var(--accent); }
+a { color: var(--ink); text-underline-offset: 0.2em; }
+a:focus-visible,
+summary:focus-visible,
+button:focus-visible { outline: 2px solid var(--margin-rule); outline-offset: 2px; }
+
+.case-details { max-width: var(--measure); }
+.case-details summary {
+  cursor: pointer;
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding: 0.5rem 0;
+}
+.case-details summary:hover { color: var(--ink); }
+.case-details[open] summary { margin-bottom: 0.5rem; }
 
 .charge-quote {
   white-space: pre-wrap;
-  border-left: 3px solid var(--line);
+  border-left: 2px solid var(--hair);
   padding-left: 1rem;
-  color: var(--muted);
-  font-size: 0.95rem;
+  color: var(--faint);
+  font-size: 0.82rem;
   margin: 0;
+  max-width: var(--measure);
+}
+.charge-quote.scroll { max-height: 320px; overflow-y: auto; }
+
+.free { color: var(--s-not-guilty); }
+
+/* ────────────────────────────────────────── the filing's own listings
+   The form lists the seven seats before a run, and lists a cast read out
+   of an uploaded dossier. Both are schedules attached to the filing, so
+   they are ruled rows rather than cards.
+
+   Note the tags stay monochrome. Side and model are not verdicts, and the
+   page has exactly one colour: the stamp on a return. */
+
+.preamble {
+  max-width: var(--measure);
+  margin: 0 0 2.25rem;
+  color: var(--faint);
 }
 
-.foot {
-  margin-top: 3rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 0.85rem;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+h2 {
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 2.5rem 0 1rem;
+  max-width: var(--measure);
 }
 
-/* The example's charge sheet is collapsed by default: available to read, but it
-   must not push the Convene button off the first screen. */
-.case-details summary {
-  cursor: pointer;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.88rem;
+h3 {
+  font-size: 0.87rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.15rem;
+}
+
+.card {
+  border-top: 1px solid var(--hair);
+  padding: 0.75rem 0 0.85rem;
+  margin: 0;
+  max-width: var(--measure);
+}
+.card + .card { margin-top: 0; }
+
+.meta { font-size: 0.78rem; color: var(--faint); margin-bottom: 0.6rem; }
+
+.tag {
+  font-family: var(--font-caption), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.63rem;
   font-weight: 600;
-  color: var(--accent);
-  padding: 0.5rem 0;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--faint);
+  white-space: nowrap;
 }
-.case-details summary:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-.case-details[open] summary { margin-bottom: 0.6rem; }
+.tag.for::before { content: "▸ "; }
+.tag.against::before { content: "◂ "; }
+.tag.model { letter-spacing: 0.06em; text-transform: none; }
 
-/* A button that reads as a link — used where the action is incidental. */
-button.linkish {
-  background: none;
-  border: 0;
-  padding: 0;
-  color: var(--accent);
-  font: inherit;
-  cursor: pointer;
-  text-decoration: underline;
-}
-button.linkish:hover { filter: brightness(1.2); }
+/* ───────────────────────────────────────────────────────────── narrow
+   Under a phone's width the gutter costs more than it gives: the margin
+   rule and the entry numbers go, and the record degrades to plain ruled
+   sections rather than a squeezed transcript. */
 
-/* The example's charge sheet is read-only and long; keep it from filling the page. */
-.charge-quote.scroll {
-  max-height: 320px;
-  overflow-y: auto;
+@media (max-width: 560px) {
+  :root { --gutter: 1.15rem; }
+  .record::before { display: none; }
+  .entry::before { content: none; }
+  .said, .charge, .appearance, .points, .points-label, .note { padding-left: 0; margin-left: 0; }
+  .note { border-left: 2px solid var(--hair); padding-left: 0.9rem; }
+  .stamp, .pending { justify-self: start; }
+  .cap { padding-left: var(--gutter); padding-right: var(--gutter); }
+  .status { padding-left: var(--gutter); padding-right: var(--gutter); }
+  .record { padding-left: var(--gutter); padding-right: var(--gutter); }
 }

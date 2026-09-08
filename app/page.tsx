@@ -28,20 +28,37 @@ export default function Home() {
 
   return (
     <main className="wrap">
-      <h1>The Tribunal</h1>
-      <p className="sub">
-        Four advocates argue the charge — two for the accused, two against. Three judges
-        then rule independently, without seeing each other&apos;s verdicts. The tribunal
-        returns three verdicts and the reasoning behind each. The decision is yours.
-      </p>
+      {/* The head of the filing, matching the caption on the record itself. */}
+      <div className="cap">
+        <div>
+          <div className="cap-court">Notice of hearing</div>
+          <h1>Convene a tribunal</h1>
+        </div>
+        <div className="docket">
+          FORM <b>T-1</b>
+          <br />
+          SEATS <b>7</b>
+          <br />
+          BENCH <b>3</b>
+        </div>
+      </div>
 
-      <ChargeSheetForm
-        choices={choices}
-        defaultModel={DEFAULT_UNIFORM_MODEL}
-        seats={personas}
-        perCharacterLabels={perCharacterLabels}
-        requiresAccessCode={Boolean(process.env.TRIBUNAL_ACCESS_CODE)}
-      />
+      <div className="record">
+        <p className="preamble">
+          Four advocates argue the charge — two for the accused, two against. Three judges
+          then rule independently, without sight of one another. The record returns three
+          verdicts and the reasoning behind each. It does not consolidate them; the
+          decision is yours.
+        </p>
+
+        <ChargeSheetForm
+          choices={choices}
+          defaultModel={DEFAULT_UNIFORM_MODEL}
+          seats={personas}
+          perCharacterLabels={perCharacterLabels}
+          requiresAccessCode={Boolean(process.env.TRIBUNAL_ACCESS_CODE)}
+        />
+      </div>
     </main>
   );
 }
