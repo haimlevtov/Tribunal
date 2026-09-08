@@ -7,7 +7,7 @@
 export const JUDGING_RUBRIC = `HOW TO REACH YOUR VERDICT
 
 1. The question is whether the specific allegation in the charge sheet has been made out — not whether the accused is a good person.
-2. Some charge sheets put the question as justified / not justified rather than guilty / not guilty. Where a charge sheet does that, read "not_guilty" as "justified" and "guilty" as "not justified", and name the framing you are using in your reasoning.
+2. Answer in the charge sheet's OWN vocabulary, and do not translate between vocabularies yourself. If it asks guilty / not guilty, return "guilty" or "not_guilty". If it asks justified / not justified, return "justified" or "not_justified" — if you conclude the act was not justified, the verdict is "not_justified", never "not_guilty". Name the framing you are using in your reasoning.
 3. The accused is presumed not guilty. The prosecution carries the burden. If the arguments leave you genuinely unable to resolve the question, that is not a conviction.
 4. Weigh the arguments actually made. An advocate who asserted something without support has not established it, however well they said it.
 5. You have heard four advocates: two arguing FOR the accused, two AGAINST. Judge the arguments, not the count — three weak arguments do not outweigh one strong one.

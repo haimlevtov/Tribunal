@@ -44,6 +44,31 @@ export function normaliseVerdict(v: unknown): unknown {
 }
 
 /**
+ * What the MODEL is allowed to say — deliberately wider than what is stored.
+ *
+ * A judge answering a charge sheet framed "justified or not justified?" must be
+ * able to answer in those words. Offering only guilty/not_guilty forces it to
+ * invert its own conclusion at the moment it writes the token, and "not
+ * justified" is lexically pulled straight to "not_guilty" — which means the
+ * opposite. Three judges on three different models all made exactly that
+ * inversion on the same run: each wrote "the breach was not justified" in its
+ * protocol and returned `not_guilty`.
+ *
+ * The aliases above already understood this vocabulary; strict structured
+ * output simply never let a model reach them. Widening the offered enum does.
+ * The model now answers in whichever vocabulary the charge sheet used, and the
+ * mapping onto the three stored kinds happens here, deterministically, instead
+ * of being something a model has to remember to do in its head.
+ */
+export const VERDICT_CHOICES = [
+  "guilty",
+  "not_guilty",
+  "justified",
+  "not_justified",
+  "hung",
+] as const;
+
+/**
  * What each judge returns. `reasoning` is the protocol entry — the account of how
  * this judge got to its verdict, which is half the point of the whole app.
  */
@@ -108,8 +133,9 @@ export const VERDICT_JSON_SCHEMA: JsonSchemaSpec = {
     properties: {
       verdict: {
         type: "string",
-        enum: [...VERDICT_KINDS],
-        description: "guilty, not_guilty, or hung if genuinely unable to decide.",
+        enum: [...VERDICT_CHOICES],
+        description:
+          "Answer in the charge sheet's own vocabulary. If it asks guilty / not guilty, return guilty or not_guilty. If it asks justified / not justified, return justified or not_justified — do NOT translate those into guilty/not_guilty yourself. Return hung only if genuinely unable to decide.",
       },
       confidence: {
         type: "number",

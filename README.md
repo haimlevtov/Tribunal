@@ -60,8 +60,20 @@ note is shown under the bench in the UI, and travels with the prompt itself.
 
 The **example charge sheet** is the dossier's canonical Case T-001 (*The Realm v. Jon Snow*),
 reproduced verbatim — do not reword it. It asks whether the killing was *justified / not
-justified*; the rubric tells judges to read `not_guilty` as "justified" and `guilty` as "not
-justified" when a charge sheet is framed that way.
+justified*.
+
+A judge answers in **the charge sheet's own vocabulary**: `justified` / `not_justified` when it
+is framed that way, `guilty` / `not_guilty` when it is not. The mapping onto the three stored
+kinds happens server-side in `normaliseVerdict`.
+
+That is a fix, not a flourish. The rubric used to ask judges to do the translation themselves —
+"read `not_guilty` as justified" — and every judge got it backwards. On one run all three wrote
+"the breach was not justified" in their protocol and returned `not_guilty`, which the rubric
+defines as *justified*: every verdict said the opposite of the reasoning printed beside it. The
+aliases already understood "not_justified"; `strict: true` on the JSON schema meant the decoder
+could never emit it, so each judge had to invert its own conclusion while writing the token —
+and "not justified" pulls straight to `not_guilty`. Widening the offered enum removed the
+inversion, and `npm run verdict-check` guards it.
 
 ## Two model modes
 
@@ -351,4 +363,5 @@ lib/
   db.ts                     service-role client
 supabase/migrations/        schema
 scripts/smoke.mjs           roster pre-flight
+scripts/verdict-check.mjs   guards the verdict/reasoning inversion
 ```
