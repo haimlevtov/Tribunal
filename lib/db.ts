@@ -88,6 +88,12 @@ export interface VerdictRow {
   run_id: string;
   participant_id: string;
   verdict: VerdictKind;
+  /**
+   * The vocabulary the judge answered in — "not_justified" where the charge
+   * sheet asked about justification. Display only; `verdict` holds the mapped
+   * kind and drives all logic. NULL on rows written before 0003.
+   */
+  verdict_as_returned: string | null;
   confidence: number;
   reasoning: string;
   points_credited: string[];

@@ -90,6 +90,9 @@ export async function GET(
         return {
           ...seat(p),
           verdict: v?.verdict ?? null,
+          // The word the judge answered in. Null on runs recorded before the
+          // column existed, and the board falls back to the mapped kind.
+          verdict_as_returned: v?.verdict_as_returned ?? null,
           confidence: v?.confidence ?? null,
           reasoning: v?.reasoning ?? null,
           points_credited: v?.points_credited ?? [],

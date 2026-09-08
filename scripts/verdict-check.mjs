@@ -78,6 +78,28 @@ check(
   true,
 );
 
+console.log("\nAnd the judge's own word survives for the stamp to quote");
+check(
+  "'not_justified' is kept verbatim",
+  notJustified.success ? notJustified.data.verdict_as_returned : null,
+  "not_justified",
+);
+check(
+  "'justified' is kept verbatim",
+  justified.success ? justified.data.verdict_as_returned : null,
+  "justified",
+);
+check(
+  "'guilty' is kept verbatim",
+  verdict("guilty").data?.verdict_as_returned ?? null,
+  "guilty",
+);
+// A word outside the offered vocabulary still stores correctly, but there is
+// nothing worth quoting — the board falls back to the mapped kind.
+const acquitted = verdict("acquitted");
+check("'acquitted' still stores as not_guilty", acquitted.data?.verdict ?? null, "not_guilty");
+check("'acquitted' leaves nothing to quote", acquitted.data?.verdict_as_returned ?? null, null);
+
 if (failures > 0) {
   console.log(`\n✗ ${failures} check(s) failed — a verdict may record the opposite of its reasoning.\n`);
   process.exit(1);
