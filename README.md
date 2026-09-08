@@ -120,6 +120,40 @@ is drift.
 
 ---
 
+## The record
+
+The interface is not an app that reports on a hearing. It is the record of one: a single ruled
+document, numbered from the appearances block to the last return, set in Courier Prime with
+Archivo Narrow for everything a document sets in type rather than types. The form is a filing —
+ruled entries on a court form rather than boxes — and the cost ledger is a schedule of costs at
+the foot of the record.
+
+Two rules hold it together, and both are load-bearing rather than decorative.
+
+**One ink for the record.** Body, rules, headings, figures and the side tags are all the same
+ink. Nothing is coloured to look important.
+
+**Colour is the verdict, never the judge.** The only colour on the page is the stamp struck on
+each return: ink green for `not_guilty`, stamp red for `guilty`, ochre for `hung`. So a bench
+that agreed reads as three matching stamps and a bench that split reads as three different ones,
+before a word has been read. Colouring by judge would rank a bench the whole design exists to
+leave unranked — which is also why the returns are identical blocks in one column rather than a
+row of cards, why there is no confidence bar to compare, and why the verdict tally was removed.
+The record closes without consolidation and says so.
+
+The stamps use `mix-blend-mode` (`multiply` on paper, `screen` on ink) so the colour sits *in*
+the surface rather than on it, which means the returns block has to keep an opaque background
+under them.
+
+Two practical notes. The mockups numbered every physical line the way a court transcript does;
+real prose wraps and CSS cannot count wrapped lines, so the record numbers **entries** instead —
+which is how a pleading is numbered anyway. Every seat renders from the moment the run is
+created, so an entry number belongs to a seat and does not shift as the tribunal fills in. And
+below 560px the gutter costs more than it gives: the margin rule and the numbers drop, and the
+record degrades to plain ruled sections.
+
+---
+
 ## Setup
 
 ### 1. Install

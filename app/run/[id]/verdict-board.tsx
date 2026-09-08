@@ -64,13 +64,13 @@ interface RunView {
 }
 
 const STATUS_TEXT: Record<RunView["status"], string> = {
-  queued: "Convening the tribunal…",
-  forging_cast: "Casting the tribunal…",
-  advocates_running: "The advocates are preparing their speeches…",
-  judges_running: "The bench is deliberating…",
-  complete: "The tribunal has ruled.",
-  failed: "The tribunal could not complete.",
-  budget_exceeded: "The tribunal stopped: budget ceiling reached.",
+  queued: "Convening",
+  forging_cast: "Casting the tribunal",
+  advocates_running: "Advocates preparing",
+  judges_running: "The bench is deliberating",
+  complete: "Record closed",
+  failed: "The tribunal could not complete",
+  budget_exceeded: "Stopped — budget ceiling reached",
 };
 
 const VERDICT_TEXT = {
@@ -80,6 +80,13 @@ const VERDICT_TEXT = {
 } as const;
 
 const POLL_MS = 1500;
+
+/** A document is dated, not timestamped. */
+function filedOn(): string {
+  return new Date()
+    .toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+    .toUpperCase();
+}
 
 export default function VerdictBoard({ runId }: { runId: string }) {
   const [run, setRun] = useState<RunView | null>(null);
@@ -117,9 +124,16 @@ export default function VerdictBoard({ runId }: { runId: string }) {
   if (error) {
     return (
       <>
-        <h1>The Tribunal</h1>
-        <div className="err">{error}</div>
-        <Link href="/">← Convene another tribunal</Link>
+        <div className="cap">
+          <div>
+            <div className="cap-court">In the matter of a fictional tribunal</div>
+            <h1>The Tribunal</h1>
+          </div>
+        </div>
+        <div className="record">
+          <div className="err">{error}</div>
+          <Link href="/">← Convene another tribunal</Link>
+        </div>
       </>
     );
   }
@@ -127,10 +141,15 @@ export default function VerdictBoard({ runId }: { runId: string }) {
   if (!run) {
     return (
       <>
-        <h1>The Tribunal</h1>
+        <div className="cap">
+          <div>
+            <div className="cap-court">In the matter of a fictional tribunal</div>
+            <h1>The Tribunal</h1>
+          </div>
+        </div>
         <div className="status">
           <span className="dot" />
-          Loading…
+          Retrieving the record
         </div>
       </>
     );
@@ -141,23 +160,34 @@ export default function VerdictBoard({ runId }: { runId: string }) {
     run.status === "failed" ||
     run.status === "budget_exceeded";
 
+  const spoken = run.advocates.filter((a) => a.argument);
   const delivered = run.judges.filter((j) => j.verdict);
-  const tally = delivered.reduce<Record<string, number>>((acc, j) => {
-    if (j.verdict) acc[j.verdict] = (acc[j.verdict] ?? 0) + 1;
-    return acc;
-  }, {});
 
   return (
     <>
-      <h1>The Tribunal</h1>
+      {/* ── Caption ── */}
+      <div className="cap">
+        <div>
+          <div className="cap-court">In the matter of a fictional tribunal</div>
+          <h1>The Tribunal</h1>
+        </div>
+        <div className="docket">
+          RUN <b>{run.id.slice(0, 8)}</b>
+          <br />
+          FILED <b>{filedOn()}</b>
+          <br />
+          BENCH{" "}
+          <b>
+            {run.model_mode === "uniform"
+              ? (run.uniform_model_label ?? "ONE MODEL")
+              : "PER CHARACTER"}
+          </b>
+        </div>
+      </div>
 
       <div className="status">
         {!settled && <span className="dot" />}
         {STATUS_TEXT[run.status]}
-        {" · "}
-        {run.model_mode === "uniform"
-          ? `one model for all seven (${run.uniform_model_label})`
-          : "a different model per character"}
         {run.character_mode !== "default" && (
           <>
             {" · "}
@@ -170,272 +200,231 @@ export default function VerdictBoard({ runId }: { runId: string }) {
         )}
       </div>
 
-      {run.error && <div className="err">{run.error}</div>}
+      {/* ── The record ── */}
+      <div className="record">
+        {run.error && <div className="err">{run.error}</div>}
 
-      <h2>The charge</h2>
-      <p className="charge-quote">{run.charge_sheet}</p>
-
-      {/* Who is sitting, and on what model. Rendered from the moment the run is
-          created, so the setup is visible while the tribunal is still working
-          rather than only once speeches arrive. */}
-      <h2>The tribunal</h2>
-      <div className="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Seat</th>
-              <th>Character</th>
-              <th>Model</th>
-            </tr>
-          </thead>
-          <tbody>
-            {run.advocates.map((a) => (
-              <tr key={`s-${a.id}`}>
-                <td>
-                  <span className={`tag ${a.side}`}>
-                    {a.side === "for" ? "for the accused" : "against the accused"}
-                  </span>
-                </td>
-                <td>
-                  {a.persona_name}
-                  {a.blurb && <div className="meta" style={{ marginBottom: 0 }}>{a.blurb}</div>}
-                </td>
-                <td>{a.model_label}</td>
-              </tr>
-            ))}
-            {run.judges.map((j) => (
-              <tr key={`s-${j.id}`}>
-                <td>
-                  <span className="tag model">judge</span>
-                </td>
-                <td>
-                  {j.persona_name}
-                  {j.blurb && <div className="meta" style={{ marginBottom: 0 }}>{j.blurb}</div>}
-                </td>
-                <td>{j.model_label}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <h2>The verdicts</h2>
-      {delivered.length === 0 ? (
-        <p className="meta">
-          {settled ? "No verdict was returned." : "The bench has not yet ruled."}
-        </p>
-      ) : (
-        <>
-          <div className="verdicts">
-            {run.judges.map((j) => (
-              <div className="card" key={j.id}>
-                <h3>{j.persona_name}</h3>
-                <div className="meta">
-                  <span className="tag model">{j.model_label}</span>
-                </div>
-                {j.verdict ? (
-                  <>
-                    <div className={`verdict-word v-${j.verdict}`}>
-                      {VERDICT_TEXT[j.verdict]}
-                    </div>
-                    <div className={`conf v-${j.verdict}`}>
-                      confidence {j.confidence?.toFixed(2)}
-                      <span className="bar">
-                        <i style={{ width: `${(j.confidence ?? 0) * 100}%` }} />
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="meta">
-                    {settled ? "No verdict returned." : "Still deliberating…"}
+        <p className="rubric">Appearances</p>
+        <div className="entry">
+          <dl className="appearance">
+            <dt>For the accused</dt>
+            <dd>
+              {run.advocates
+                .filter((a) => a.side === "for")
+                .map((a) => (
+                  <div key={a.id}>
+                    {a.persona_name} <span className="of">· {a.model_label}</span>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
+                ))}
+            </dd>
+            <dt>Against</dt>
+            <dd>
+              {run.advocates
+                .filter((a) => a.side === "against")
+                .map((a) => (
+                  <div key={a.id}>
+                    {a.persona_name} <span className="of">· {a.model_label}</span>
+                  </div>
+                ))}
+            </dd>
+            <dt>On the bench</dt>
+            <dd>
+              {run.judges.map((j) => (
+                <div key={j.id}>
+                  {j.persona_name} <span className="of">· {j.model_label}</span>
+                </div>
+              ))}
+              <div className="of">ruling blind — no judge sees another&apos;s verdict</div>
+            </dd>
+          </dl>
+        </div>
 
-          {delivered.length > 1 && (
-            <p className="meta" style={{ marginTop: "1rem" }}>
-              {Object.entries(tally)
-                .map(([v, n]) => `${n} × ${VERDICT_TEXT[v as keyof typeof VERDICT_TEXT]}`)
-                .join(" · ")}
-              {" — "}
-              the tribunal does not aggregate these. The decision is yours.
+        <p className="rubric">The charge</p>
+        <div className="entry">
+          <p className="charge">{run.charge_sheet}</p>
+        </div>
+
+        <p className="rubric">Testimony</p>
+        {spoken.length === 0 ? (
+          <div className="entry">
+            <p className="said">
+              {settled
+                ? "No advocate delivered."
+                : "The advocates have not yet been heard."}
             </p>
-          )}
-        </>
-      )}
-
-      <h2>The protocol — how each judge decided</h2>
-      {delivered.length === 0 ? (
-        <p className="meta">Reasoning appears once the bench has ruled.</p>
-      ) : (
-        run.judges
-          .filter((j) => j.reasoning)
-          .map((j) => (
-            <div className="card" key={`p-${j.id}`}>
-              <h3>
-                {j.persona_name}{" "}
-                <span className={`tag ${j.verdict === "guilty" ? "against" : "for"}`}>
-                  {j.verdict ? VERDICT_TEXT[j.verdict] : ""}
+          </div>
+        ) : (
+          run.advocates.map((a) => (
+            <div className="entry" key={a.id}>
+              <span className="who">
+                {a.persona_name}
+                <span className="seat">
+                  {a.side === "for" ? "Defence" : "Prosecution"} · {a.model_label}
                 </span>
-              </h3>
-              <div className="meta">
-                {j.blurb} · <span className="tag model">{j.model_label}</span>
-              </div>
-              <div className="reasoning">
-                <div className="reasoning-label">
-                  Why {j.persona_name} ruled this way
-                </div>
-                <p className="speech" style={{ marginBottom: 0 }}>
-                  {j.reasoning}
+              </span>
+              {a.argument ? (
+                <>
+                  <p className="said">{a.argument}</p>
+                  {a.key_points.length > 0 && (
+                    <ul className="points">
+                      {a.key_points.map((p, i) => (
+                        <li key={i}>{p}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {a.reasoning && (
+                    <div className="note">
+                      <span className="note-label">Counsel&apos;s own note, for the record</span>
+                      <p>{a.reasoning}</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="said">
+                  {settled ? "This advocate did not deliver." : "Preparing…"}
                 </p>
-              </div>
-              {j.points_credited.length > 0 && (
-                <>
-                  <div className="meta" style={{ marginBottom: "0.3rem" }}>
-                    Found persuasive
-                  </div>
-                  <ul className="points">
-                    {j.points_credited.map((p, i) => (
-                      <li key={i}>{p}</li>
-                    ))}
-                  </ul>
-                </>
-              )}
-              {j.points_rejected.length > 0 && (
-                <>
-                  <div className="meta" style={{ margin: "0.75rem 0 0.3rem" }}>
-                    Rejected
-                  </div>
-                  <ul className="points">
-                    {j.points_rejected.map((p, i) => (
-                      <li key={i}>{p}</li>
-                    ))}
-                  </ul>
-                </>
               )}
             </div>
           ))
-      )}
+        )}
 
-      <h2>The speeches</h2>
-      {run.advocates.every((a) => !a.argument) ? (
-        <p className="meta">The advocates have not yet spoken.</p>
-      ) : (
-        run.advocates.map((a) => (
-          <div className="card" key={a.id}>
-            <h3>
-              {a.persona_name}{" "}
-              <span className={`tag ${a.side}`}>
-                {a.side === "for" ? "for the accused" : "against the accused"}
-              </span>
-            </h3>
-            <div className="meta">
-              {a.blurb} · <span className="tag model">{a.model_label}</span>
-            </div>
-            {a.argument ? (
-              <>
-                <p className="speech">{a.argument}</p>
-                {a.key_points.length > 0 && (
-                  <ul className="points">
-                    {a.key_points.map((p, i) => (
-                      <li key={i}>{p}</li>
-                    ))}
-                  </ul>
-                )}
-                {a.reasoning && (
-                  <div className="reasoning">
-                    <div className="reasoning-label">
-                      How {a.persona_name} built this case
-                    </div>
-                    <p className="speech" style={{ marginBottom: 0 }}>
-                      {a.reasoning}
-                    </p>
+        {/* ── The returns. Identical blocks, no columns, no ordering, no
+             total. Every judge is rendered whether or not they have ruled,
+             so an entry number belongs to a seat and does not shift as the
+             bench reports. ── */}
+        <p className="rubric">The returns</p>
+        <div className="returns">
+          {run.judges.map((j) => (
+            <div className="return entry" key={j.id}>
+              <div>
+                <span className="who">
+                  {j.persona_name}
+                  <span className="seat">{j.model_label}</span>
+                </span>
+                {j.reasoning && (
+                  <div className="note">
+                    <span className="note-label">Protocol</span>
+                    <p>{j.reasoning}</p>
                   </div>
                 )}
-              </>
-            ) : (
-              <div className="meta">
-                {settled ? "This advocate did not deliver." : "Preparing…"}
+                {j.points_credited.length > 0 && (
+                  <>
+                    <div className="points-label">Credited</div>
+                    <ul className="points">
+                      {j.points_credited.map((p, i) => (
+                        <li key={i}>{p}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {j.points_rejected.length > 0 && (
+                  <>
+                    <div className="points-label">Rejected</div>
+                    <ul className="points">
+                      {j.points_rejected.map((p, i) => (
+                        <li key={i}>{p}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
               </div>
-            )}
-          </div>
-        ))
-      )}
 
-      <h2>Token &amp; cost budget</h2>
-      <div className="card">
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Model</th>
-                <th className="num">Calls</th>
-                <th className="num">Prompt</th>
-                <th className="num">Completion</th>
-                <th className="num">Cost</th>
-              </tr>
-            </thead>
-            <tbody>
-              {run.budget.by_model.map((m) => (
-                <tr key={m.model_id}>
-                  <td>
-                    {m.model_id}
-                    {m.failures > 0 && (
-                      <span className="meta"> · {m.failures} failed</span>
-                    )}
-                  </td>
-                  <td className="num">{m.calls}</td>
-                  <td className="num">{m.prompt_tokens.toLocaleString()}</td>
-                  <td className="num">{m.completion_tokens.toLocaleString()}</td>
+              {j.verdict ? (
+                <div className={`stamp s-${j.verdict}`}>
+                  <b>{VERDICT_TEXT[j.verdict]}</b>
+                  {j.confidence !== null && <span>conf. {j.confidence.toFixed(2)}</span>}
+                </div>
+              ) : (
+                <div className="pending">
+                  {settled ? "No return" : "Deliberating"}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="closing">
+          <div className="closing-line">
+            {delivered.length === 0
+              ? "No return was entered"
+              : "The record closes without consolidation"}
+          </div>
+          <div className="closing-sub">
+            {delivered.length === 0
+              ? settled
+                ? "The bench did not rule."
+                : "The bench has not yet ruled."
+              : `${delivered.length} ${
+                  delivered.length === 1 ? "judge" : "judges"
+                } ruled without sight of one another. No majority is computed and none is implied. The decision is yours.`}
+          </div>
+        </div>
+
+        {/* ── Schedule of costs ── */}
+        <p className="rubric">Schedule of costs</p>
+        <div className="costs">
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th className="num">Calls</th>
+                  <th className="num">Failed</th>
+                  <th className="num">Prompt</th>
+                  <th className="num">Completion</th>
+                  <th className="num">Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {run.budget.by_model.map((m) => (
+                  <tr key={m.model_id}>
+                    <td className={m.cost_usd > 0 ? "paid" : undefined}>{m.model_id}</td>
+                    <td className="num">{m.calls}</td>
+                    <td className="num">
+                      {m.failures > 0 ? m.failures : <span className="dash">—</span>}
+                    </td>
+                    <td className="num">{m.prompt_tokens.toLocaleString()}</td>
+                    <td className="num">{m.completion_tokens.toLocaleString()}</td>
+                    <td className={`num${m.cost_usd > 0 ? " paid" : ""}`}>
+                      {m.cost_usd === 0 ? (
+                        <span className="dash">—</span>
+                      ) : (
+                        `$${m.cost_usd.toFixed(6)}`
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="total">
+                  <td>Total</td>
+                  <td className="num">{run.budget.call_count}</td>
+                  <td className="num">{run.budget.failed_calls}</td>
+                  <td className="num">{run.budget.total_prompt_tokens.toLocaleString()}</td>
                   <td className="num">
-                    {m.cost_usd === 0 ? (
-                      <span className="free">free</span>
-                    ) : (
-                      `$${m.cost_usd.toFixed(6)}`
-                    )}
+                    {run.budget.total_completion_tokens.toLocaleString()}
+                  </td>
+                  <td className="num">
+                    {run.budget.total_cost_usd === 0
+                      ? "$0.00"
+                      : `$${run.budget.total_cost_usd.toFixed(6)}`}
                   </td>
                 </tr>
-              ))}
-              <tr>
-                <td>
-                  <strong>Total</strong>
-                </td>
-                <td className="num">
-                  <strong>{run.budget.call_count}</strong>
-                </td>
-                <td className="num">
-                  <strong>{run.budget.total_prompt_tokens.toLocaleString()}</strong>
-                </td>
-                <td className="num">
-                  <strong>{run.budget.total_completion_tokens.toLocaleString()}</strong>
-                </td>
-                <td className="num">
-                  <strong>
-                    {run.budget.total_cost_usd === 0 ? (
-                      <span className="free">$0.00</span>
-                    ) : (
-                      `$${run.budget.total_cost_usd.toFixed(6)}`
-                    )}
-                  </strong>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
+          <p className="tally">
+            {run.budget.total_tokens.toLocaleString()} tokens over{" "}
+            {run.budget.call_count} calls
+            {run.budget.failed_calls > 0 &&
+              `, ${run.budget.failed_calls} of which failed and fell to another model`}
+            {" · "}
+            {(run.budget.total_latency_ms / 1000).toFixed(1)}s of model time
+          </p>
         </div>
-        <div className="meta" style={{ marginTop: "0.9rem", marginBottom: 0 }}>
-          {run.budget.total_tokens.toLocaleString()} tokens across{" "}
-          {run.budget.call_count} model calls
-          {run.budget.failed_calls > 0 && ` (${run.budget.failed_calls} failed and retried)`}
-          {" · "}
-          {(run.budget.total_latency_ms / 1000).toFixed(1)}s of model time
-        </div>
-      </div>
 
-      <div className="foot">
-        <Link href="/">← Convene another tribunal</Link>
-        {" · "}Run {run.id}
+        <div className="foot">
+          <Link href="/">← Convene another tribunal</Link>
+          {" · "}Run {run.id}
+        </div>
       </div>
     </>
   );
